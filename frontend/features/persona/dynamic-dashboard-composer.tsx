@@ -8,7 +8,18 @@ import { useRouter } from 'next/navigation';
 
 export default function DynamicDashboardComposer() {
   const router = useRouter();
-  const { profile, persona, workspaceManifest } = usePersonaStore();
+  const { profile, persona, workspaceManifest, isRestoringSession } = usePersonaStore();
+
+  if (isRestoringSession) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center rounded-xl border border-border bg-card/50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
+          <p className="text-sm font-semibold text-muted-foreground animate-pulse">Restoring workspace session...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile || !persona || !workspaceManifest) return null;
 

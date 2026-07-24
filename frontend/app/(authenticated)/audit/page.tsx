@@ -4,30 +4,25 @@ import React, { useState, useEffect } from 'react';
 import AuditDashboard from '@/features/audit/audit-dashboard';
 import { AuditEvent } from '@/features/audit/audit-timeline';
 import PermissionGuard from '@/features/persona/permission-guard';
+import { api } from '@/lib/api-client';
 
 export default function AuditPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [summaryStats, setSummaryStats] = useState<any>(null);
 
   useEffect(() => {
-    async function fetchEvents() {
+    async function fetchData() {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const token = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/audit/events?limit=100`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setEvents(data);
-        }
+        const eventsData = await api.get<AuditEvent[]>('/api/audit/events?limit=100');
+        setEvents(eventsData);
+        
+        const statsData = await api.get<any>('/api/audit/summary');
+        setSummaryStats(statsData);
       } catch (err) {
-        console.error('Failed to fetch audit events:', err);
+        console.error('Failed to fetch audit data:', err);
       }
     }
-    fetchEvents();
+    fetchData();
   }, []);
 
   return (
@@ -42,7 +37,7 @@ export default function AuditPage() {
       </div>
 
       {/* Audit Dashboard Orchestrator */}
-      <AuditDashboard events={events} />
+      <AuditDashboard events={events} summaryStats={summaryStats} />
       </div>
     </PermissionGuard>
   );

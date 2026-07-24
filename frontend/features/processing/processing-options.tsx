@@ -92,7 +92,7 @@ export default function ProcessingOptions({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-foreground truncate">{opt.label}</span>
-                  {/* Mock Toggle Switch */}
+                  {/* UI Toggle Switch */}
                   <div
                     className={`relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                       isEnabled ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-800'

@@ -27,11 +27,12 @@ export class AuthService {
    * Returns the user's full profile, permissions, and workspace manifest.
    */
   public async login(email: string, password: string): Promise<LoginResponse> {
-    // Step 1: Authenticate and receive JWT tokens
+    // Step 1: Authenticate and receive HttpOnly cookies
     const tokenRes = await fetch(`${this.baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      credentials: 'include',
     });
 
     if (!tokenRes.ok) {
@@ -39,22 +40,12 @@ export class AuthService {
       throw new Error(err.detail || `Login failed with status ${tokenRes.status}`);
     }
 
-    const tokens: TokenResponse = await tokenRes.json();
-
-    // Step 2: Store tokens for all subsequent API calls
-    localStorage.setItem('ib-access-token', tokens.access_token);
-    localStorage.setItem('ib-refresh-token', tokens.refresh_token);
-
-    // Step 3: Set session cookie so Next.js middleware allows access to protected routes
-    // We store a marker value (not the raw JWT) as the cookie is only used for route gating
-    setCookie(SESSION_TOKEN_KEY, 'authenticated', 7);
-
-    // Step 4: Fetch full user profile + workspace manifest
+    // Step 2: Fetch full user profile + workspace manifest
     const meRes = await fetch(`${this.baseUrl}/api/auth/me`, {
       headers: {
-        'Authorization': `Bearer ${tokens.access_token}`,
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
 
     if (!meRes.ok) {
@@ -75,20 +66,15 @@ export class AuthService {
    * and clearing all local auth state.
    */
   public async logout(): Promise<void> {
-    const refreshToken = localStorage.getItem('ib-refresh-token');
-    if (refreshToken) {
-      try {
-        await fetch(`${this.baseUrl}/api/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      } catch {
-        // Best-effort logout — clear local state regardless
-      }
+    try {
+      await fetch(`${this.baseUrl}/api/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+    } catch {
+      // Best-effort logout — clear local state regardless
     }
-    localStorage.removeItem('ib-access-token');
-    localStorage.removeItem('ib-refresh-token');
     eraseCookie(SESSION_TOKEN_KEY);
   }
 
@@ -96,14 +82,11 @@ export class AuthService {
    * Refreshes the current user's profile from the backend (e.g., on page reload).
    */
   public async getMe(): Promise<LoginResponse | null> {
-    const accessToken = localStorage.getItem('ib-access-token');
-    if (!accessToken) return null;
-
     const meRes = await fetch(`${this.baseUrl}/api/auth/me`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
 
     if (!meRes.ok) return null;

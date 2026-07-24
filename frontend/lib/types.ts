@@ -3,7 +3,8 @@ export type UserRole =
   | 'Maintenance Engineer'
   | 'Project Manager'
   | 'Regulatory & Compliance Manager'
-  | 'Director / Executive';
+  | 'Director / Executive'
+  | 'CEO';
 
 export interface EmployeeProfile {
   employeeId: string;

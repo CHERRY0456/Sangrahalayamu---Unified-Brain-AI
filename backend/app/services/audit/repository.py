@@ -74,3 +74,48 @@ class AuditLogRepository:
             
         stmt = stmt.order_by(AuditLog.timestamp.desc()).limit(limit)
         return list(db.scalars(stmt).all())
+
+    @staticmethod
+    def get_audit_summary_stats(db: Session) -> dict:
+        from sqlalchemy import text
+        
+        stats = {
+            "totalConversations": 0,
+            "docsUploaded": 0,
+            "aiResponses": 0,
+            "transparencySessions": 0,
+            "accessRequests": 0,
+            "processingJobs": 0
+        }
+        
+        try:
+            # Total Conversations
+            res = db.execute(text("SELECT COUNT(DISTINCT conversation_id) FROM conversation_messages")).scalar()
+            stats["totalConversations"] = int(res) if res else 0
+            
+            # Docs Uploaded
+            res = db.execute(text("SELECT COUNT(*) FROM documents")).scalar()
+            stats["docsUploaded"] = int(res) if res else 0
+            
+            # AI Responses
+            res = db.execute(text("SELECT COUNT(*) FROM conversation_messages WHERE role = 'assistant'")).scalar()
+            stats["aiResponses"] = int(res) if res else 0
+            
+            # RAG Audit Sessions
+            res = db.execute(text("SELECT COUNT(*) FROM audit_logs WHERE event_type = 'transparency'")).scalar()
+            stats["transparencySessions"] = int(res) if res else 0
+            
+            # Access Requests
+            res = db.execute(text("SELECT COUNT(*) FROM access_requests")).scalar()
+            stats["accessRequests"] = int(res) if res else 0
+            
+            # Processing Jobs (assuming PROCESSED or READY signifies completed processing)
+            res = db.execute(text("SELECT COUNT(*) FROM documents WHERE status IN ('PROCESSED', 'READY', 'FAILED')")).scalar()
+            stats["processingJobs"] = int(res) if res else 0
+            
+        except Exception as e:
+            # If any table is missing during setup, catch gracefully and return 0
+            print(f"Error computing summary stats: {e}")
+            db.rollback()
+            
+        return stats

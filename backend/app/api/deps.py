@@ -1,5 +1,5 @@
 from typing import Generator, List
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -8,35 +8,40 @@ from app.models.user import User
 from app.services.auth.jwt import JwtService
 from app.services.policy import PolicyEngine
 
-# Establish standard bearer oauth scheme endpoint
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
 def get_current_user(
-    db: Session = Depends(get_db), 
-    token: str = Depends(oauth2_scheme)
+    request: Request,
+    db: Session = Depends(get_db)
 ) -> User:
     """
-    Dependency verifying signed JWT access token signature, mapping payload subject to User model.
+    Dependency verifying signed JWT access token signature from cookies, mapping payload subject to User model.
     """
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Access token cookie missing.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user_id = JwtService.verify_token(token, is_refresh=False)
-    
+
     stmt = select(User).where(User.id == user_id)
     user = db.scalar(stmt)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User identity not found.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is inactive.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     return user
 
 class PermissionChecker:

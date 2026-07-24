@@ -66,7 +66,7 @@ export default function GraphPreview({
 
   const fetchExpandedNodes = useCallback(async (nodeId: string) => {
     try {
-      const res = await fetch(`/api/graph/neighbors/${nodeId}?depth=1`);
+      const res = await fetch(`/api/graph/neighbors/${nodeId}?depth=1`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         // Map API response nodes to our format
@@ -189,7 +189,7 @@ export default function GraphPreview({
                     Description
                   </span>
                   <p className="text-muted-foreground leading-relaxed">
-                    {selectedNode.description || 'Enterprise database entity matching safety guidelines or maintenance log checklists.'}
+                    {selectedNode.description || 'Enterprise database entity.'}
                   </p>
                 </div>
                 {selectedNode.attributes && (

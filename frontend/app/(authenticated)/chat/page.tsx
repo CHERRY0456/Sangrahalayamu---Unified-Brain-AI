@@ -25,8 +25,16 @@ interface Message {
   text: string;
   timestamp: string;
 }
-
-
+const generateUUID = () => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 export default function ChatPage() {
   const { stagedFiles, retrievalMode, setRetrievalMode, processingOptions } = useAppStore();
@@ -75,7 +83,7 @@ export default function ChatPage() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const accessToken = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/chat/conversations`, {
+        const res = await fetch(`${baseUrl}/api/chat/conversations`, { credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
@@ -135,7 +143,7 @@ export default function ChatPage() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const accessToken = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/chat/conversations/${activeId}/messages`, {
+        const res = await fetch(`${baseUrl}/api/chat/conversations/${activeId}/messages`, { credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
@@ -213,11 +221,11 @@ export default function ChatPage() {
   const handleDeleteConversation = async (id: string) => {
     if (isStreaming || isTyping) return;
     setConversations((prev) => prev.filter((c) => c.id !== id));
-    
+
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const accessToken = localStorage.getItem('ib-access-token');
-      await fetch(`${baseUrl}/api/chat/conversations/${id}`, {
+      await fetch(`${baseUrl}/api/chat/conversations/${id}`, { credentials: 'include',
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -236,7 +244,7 @@ export default function ChatPage() {
   const handleSendMessage = async (text: string) => {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg: Message = {
-      id: Math.random().toString(),
+      id: generateUUID(),
       sender: 'user',
       text,
       timestamp: timeStr,
@@ -251,7 +259,7 @@ export default function ChatPage() {
     // 2. Trigger typing indicator
     setIsTyping(true);
 
-    const newMsgId = Math.random().toString();
+    const newMsgId = generateUUID();
     const aiMsg: Message = {
       id: newMsgId,
       sender: 'ai',
@@ -262,7 +270,7 @@ export default function ChatPage() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const accessToken = typeof window !== 'undefined' ? localStorage.getItem('ib-access-token') : null;
-      const response = await fetch(`${baseUrl}/api/chat`, {
+      const response = await fetch(`${baseUrl}/api/chat`, { credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -305,7 +313,7 @@ export default function ChatPage() {
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') continue;
-              
+
               try {
                 const data = JSON.parse(dataStr);
                 if (data.type === 'token' || data.content) {
@@ -358,7 +366,7 @@ export default function ChatPage() {
                       links: [],
                     }
                   };
-                  
+
                   setExplanations(prev => ({ ...prev, [newMsgId]: dynamicExp }));
                 }
               } catch (e) {
@@ -398,7 +406,7 @@ export default function ChatPage() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const accessToken = localStorage.getItem('ib-access-token');
-      const res = await fetch(`${baseUrl}/api/chat/explain/${msgId}`, {
+      const res = await fetch(`${baseUrl}/api/chat/explain/${msgId}`, { credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
@@ -416,53 +424,17 @@ export default function ChatPage() {
   };
 
   const handleTriggerRequestAccess = (msgId?: string) => {
-    if (msgId) {
-      const msg = activeMessages.find((m) => m.id === msgId);
-      const text = msg?.text.toLowerCase() || '';
-      
-      if (text.includes('boiler') || text.includes('cylinder')) {
-        setRestrictedDocsForModal([
-          {
-            name: 'Boiler_Calibration_SOP.docx',
-            category: 'Compliance',
-            relevanceScore: 94,
-            sectionsAvailable: ['Complete Document', 'Section 2.3: Cylinder Limits', 'Section 4.1: Relief Valving'],
-          },
-          {
-            name: 'P-102A_Schematics_v3.pdf',
-            category: 'P&ID Blueprint',
-            relevanceScore: 89,
-            sectionsAvailable: ['Complete Document', 'Section 4.1: Flow Diagrams', 'Section 5.2: Electrical Calibrations'],
-          }
-        ]);
-      } else if (text.includes('pressure') || text.includes('osha')) {
-        setRestrictedDocsForModal([
-          {
-            name: 'OSHA_Steam_Regulations_2026.pdf',
-            category: 'Compliance',
-            relevanceScore: 91,
-            sectionsAvailable: ['Complete Document', 'Section 2.1: Steam Ventilation', 'Section 3.4: Pressure Release SOPs'],
-          },
-          {
-            name: 'Maintenance_Log_2026_07.xlsx',
-            category: 'Energy Reports',
-            relevanceScore: 85,
-            sectionsAvailable: ['Complete Document', 'Section 1.2: General Specifications', 'Section 2.3: Cylinder Limits'],
-          }
-        ]);
-      } else {
-        setRestrictedDocsForModal(undefined);
-      }
-    } else {
-      setRestrictedDocsForModal(undefined);
-    }
+    // In a production environment, restricted docs would be identified by the
+    // backend during the RAG retrieval phase and returned in the message metadata.
+    // We remove the hardcoded fallback arrays here.
+    setRestrictedDocsForModal(undefined);
     setIsRequestAccessOpen(true);
   };
 
   return (
     <PermissionGuard permission="chat">
       <div className="flex h-[calc(100vh-8rem)] rounded-xl border border-border bg-card/25 overflow-hidden shadow-sm animate-in fade-in duration-300">
-        
+
         {/* Sidebar Conversation List */}
         <ChatSidebar
           conversations={conversations}
@@ -474,7 +446,7 @@ export default function ChatPage() {
 
         {/* Main Split Screen Area */}
         <div className="flex-1 flex overflow-hidden">
-          
+
           {/* Main chat window container */}
           <div className="flex-1 flex flex-col justify-between bg-background/45 h-full relative border-r border-border/40">
             {/* Top Context Bar */}
@@ -490,9 +462,9 @@ export default function ChatPage() {
             {/* Message Feeds Scroll Container */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {activeMessages.map((msg) => (
-                <MessageBubble 
-                  key={msg.id} 
-                  message={msg} 
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
                   onTriggerRequestAccess={() => handleTriggerRequestAccess(msg.id)}
                   onExplainResponse={() => handleExplainResponse(msg.id)}
                 />

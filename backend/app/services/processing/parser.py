@@ -9,6 +9,9 @@ from app.services.processing.ocr import OCRRouter
 
 logger = logging.getLogger("sangrahalayamu.processing.parser")
 
+DOCLING_PDF_MAX_PAGES = int(os.getenv("DOCLING_PDF_MAX_PAGES", "500"))
+DOCLING_MAX_FILE_MB = int(os.getenv("DOCLING_MAX_FILE_MB", "25"))
+
 
 # ---------------------------------------------------------------------------
 # Utility: Helper to convert flat parsed elements to a hierarchical layout tree
@@ -101,7 +104,7 @@ class GenericTextParser(BaseParser):
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 raw_text = f.read()
         except Exception as e:
-            raw_text = f"Generic fallback parsed content placeholder. File read error: {e}"
+            raise RuntimeError(f"Unable to read text document '{filename}': {e}") from e
 
         # Parse text into paragraphs and headings
         lines = raw_text.split("\n")
@@ -178,9 +181,47 @@ class DoclingParser(BaseParser):
             return True
         return False
 
+    def _pdf_page_count(self, file_path: str) -> Optional[int]:
+        try:
+            import pypdf
+            return len(pypdf.PdfReader(file_path).pages)
+        except Exception as exc:
+            logger.warning(f"[DoclingParser] Could not determine PDF page count: {exc}")
+            return None
+
+    def _should_use_docling(self, file_path: str, filename: str) -> bool:
+        ext = os.path.splitext(filename)[1].lower()
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+
+        if file_size_mb > DOCLING_MAX_FILE_MB:
+            logger.warning(
+                f"[DoclingParser] Skipping Docling for '{filename}' because file size "
+                f"{file_size_mb:.1f}MB exceeds DOCLING_MAX_FILE_MB={DOCLING_MAX_FILE_MB}."
+            )
+            return False
+
+        if ext == ".pdf":
+            page_count = self._pdf_page_count(file_path)
+            if page_count and page_count > DOCLING_PDF_MAX_PAGES:
+                logger.warning(
+                    f"[DoclingParser] Skipping Docling for '{filename}' because page count "
+                    f"{page_count} exceeds DOCLING_PDF_MAX_PAGES={DOCLING_PDF_MAX_PAGES}. "
+                    "Using lightweight PDF extraction to avoid CPU memory exhaustion."
+                )
+                return False
+
+        return True
+
     def parse(self, file_path: str, filename: str) -> ParserResult:
         logger.info(f"[DoclingParser] Attempting IBM Docling parse for '{filename}'")
+        if not self._should_use_docling(file_path, filename):
+            return self._fallback_parse(file_path, filename, reason="docling_guardrail")
+
         try:
+            os.environ.setdefault("OMP_NUM_THREADS", "1")
+            os.environ.setdefault("MKL_NUM_THREADS", "1")
+            os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
             from docling.document_converter import DocumentConverter
             converter = DocumentConverter()
             result = converter.convert(file_path)
@@ -240,9 +281,9 @@ class DoclingParser(BaseParser):
                 f"[DoclingParser] Docling initialization failed. "
                 f"Activating PDF/Docx secondary fallbacks. Error: {docling_err}"
             )
-            return self._fallback_parse(file_path, filename)
+            return self._fallback_parse(file_path, filename, reason=str(docling_err))
 
-    def _fallback_parse(self, file_path: str, filename: str) -> ParserResult:
+    def _fallback_parse(self, file_path: str, filename: str, reason: str = "docling_error") -> ParserResult:
         """
         Robust secondary parsing utilizing lighter standard libraries.
         """
@@ -276,6 +317,7 @@ class DoclingParser(BaseParser):
                             })
             except Exception as e:
                 logger.error(f"[DoclingParserFallback] pypdf fallback failed: {e}")
+                raise RuntimeError(f"PDF parsing failed for '{filename}'. Docling reason: {reason}. PyPDF reason: {e}") from e
         elif ext in (".docx", ".doc"):
             try:
                 import docx
@@ -302,7 +344,13 @@ class DoclingParser(BaseParser):
             except Exception as e:
                 logger.error(f"[DoclingParserFallback] docx fallback failed: {e}")
 
-        # If flat elements remain empty, read as plain text
+        if ext == ".pdf" and not flat_elements:
+            raise RuntimeError(
+                f"No extractable text was found in PDF '{filename}'. "
+                "The file may be scanned or image-only. Install/configure OCR support or upload a text-searchable PDF."
+            )
+
+        # If flat elements remain empty, read non-PDF assets as plain text
         if not flat_elements:
             try:
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -345,7 +393,7 @@ class DoclingParser(BaseParser):
             raw_markdown=raw_markdown,
             file_type="structured_document",
             word_count=len(full_text.split()),
-            metadata={"parser": "DoclingParser", "engine": "fallback_extractor"}
+            metadata={"parser": "DoclingParser", "engine": "fallback_extractor", "fallback_reason": reason}
         )
 
 
@@ -782,7 +830,7 @@ class ParserStage(PipelineStage):
         parser = ParserRegistry.select_parser(context.file_path)
         # Parse the document and assign the unified ParserResult to context
         context.extra_state["parser_result"] = parser.parse(context.file_path, context.filename)
-        # Assign mock compatibility parsed_doc to not break older elements if any downstream relies on it
+        # Backwards compatibility bridge for older downstream stages.
         result = context.extra_state["parser_result"]
         
         # Backwards-compatibility bridge: map layout tree children to flat elements for older stages

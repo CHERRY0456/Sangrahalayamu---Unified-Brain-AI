@@ -5,7 +5,7 @@ from .metadata import ProcessingMetadataGenerator, MetadataStage
 from .entities import ProcessingEntityExtractor, EntitiesStage
 from .relationships import ProcessingRelationshipExtractor, RelationshipsStage
 from .chunking import ProcessingSemanticChunker, ChunkingStage
-from .embeddings import EmbeddingInterface, EmbeddingMetadata, MockEmbeddingProvider, EmbeddingsStage
+from .embeddings import EmbeddingInterface, EmbeddingMetadata, BedrockEmbeddingProvider, EmbeddingsStage
 from .status import ProcessingStatusManager
 from .models import (
     ProcessedDocumentPayload,
@@ -40,7 +40,7 @@ __all__ = [
     "ChunkingStage",
     "EmbeddingInterface",
     "EmbeddingMetadata",
-    "MockEmbeddingProvider",
+    "BedrockEmbeddingProvider",
     "EmbeddingsStage",
     "ProcessingStatusManager",
     "ProcessedDocumentPayload",

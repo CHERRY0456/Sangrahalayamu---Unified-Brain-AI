@@ -57,7 +57,7 @@ app = FastAPI(
 # 1. CORS — must be outermost so pre-flight OPTIONS requests are handled first
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Restrict to client domain in production
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

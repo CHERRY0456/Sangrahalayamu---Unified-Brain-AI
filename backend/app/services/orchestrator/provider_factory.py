@@ -1,5 +1,5 @@
 from app.core.config import settings
-from .providers import LLMProvider, MockBedrockProvider, BedrockProvider
+from .providers import LLMProvider, BedrockProvider
 
 class LLMProviderFactory:
     """
@@ -9,10 +9,8 @@ class LLMProviderFactory:
     def get_llm_provider() -> LLMProvider:
         provider_name = settings.llm.provider.lower().strip()
         
-        if provider_name == "mock_bedrock" or provider_name == "mock":
-            return MockBedrockProvider()
-        elif provider_name == "bedrock":
+        if provider_name == "bedrock":
             return BedrockProvider()
         else:
-            # Fallback mock for standard testing safety
-            return MockBedrockProvider()
+            # Enforce Zero-Mock Production Mandate
+            return BedrockProvider()

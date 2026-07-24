@@ -24,7 +24,7 @@ from .metadata import MetadataStage
 from .entities import EntitiesStage
 from .relationships import RelationshipsStage
 from .chunking import ChunkingStage
-from .embeddings import EmbeddingsStage, MockEmbeddingProvider, EmbeddingInterface
+from .embeddings import EmbeddingsStage, BedrockEmbeddingProvider, EmbeddingInterface
 from .status import ProcessingStatusManager
 from .payload_prep import IngestionPayloadPreparer
 
@@ -37,7 +37,7 @@ class DocumentProcessingPipeline:
     entities, relationships, semantic chunks, and EmbeddingDocuments.
     """
     # Pluggable Embedding adapter
-    embedding_provider: EmbeddingInterface = MockEmbeddingProvider()
+    embedding_provider: EmbeddingInterface = BedrockEmbeddingProvider()
 
     @staticmethod
     def process_document(db: Session, document_id: int) -> ProcessedDocumentPayload:
@@ -58,7 +58,7 @@ class DocumentProcessingPipeline:
 
         uploader = doc.uploaded_by
         if not uploader:
-            # Fallback mock user if missing (for seeded files)
+            # Fallback default user if missing (for seeded files)
             uploader_stmt = select(User).limit(1)
             uploader = db.scalar(uploader_stmt)
 
@@ -225,8 +225,10 @@ class DocumentProcessingPipeline:
                 pass
 
             logger.info(
-                f"[IngestionEngine] Success: Document ID {doc.id} processed via '{parser_name}' in {latency_ms:.1f}ms. "
-                f"Generated {len(processed_payload.chunks)} chunks, {len(processed_payload.entities)} entities."
+                f"[IngestionEngine|SUCCESS] Document ID: {doc.id} | UUID: {doc.uuid} | Name: '{doc.name}' | "
+                f"Parser: '{parser_name}' | Modality: '{modality}' | Time: {latency_ms:.1f}ms | "
+                f"Chunks: {len(processed_payload.chunks)} | Entities: {len(processed_payload.entities)} | "
+                f"Relationships: {len(processed_payload.relationships)} | Embedding Docs: {len(embedding_docs)}"
             )
             return processed_payload
 
@@ -251,7 +253,10 @@ class DocumentProcessingPipeline:
             except Exception:
                 pass
 
-            logger.error(f"[IngestionEngine] Processing failed for document ID {document_id}: {error_reason}")
+            logger.error(
+                f"[IngestionEngine|ERROR] Failed to process Document ID: {document_id}. "
+                f"Reason: {error_reason}"
+            )
             ProcessingStatusManager.set_failed(db, doc, error_reason)
             raise e
             

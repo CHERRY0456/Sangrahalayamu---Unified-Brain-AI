@@ -9,8 +9,9 @@ import CategorySelector from '@/features/upload/category-selector';
 import DescriptionForm from '@/features/upload/description-form';
 import ReviewUpload from '@/features/upload/review-upload';
 import { useAppStore } from '@/store/app-context';
-import { ArrowLeft, ArrowRight, Play } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Loader2, Play } from 'lucide-react';
 import PermissionGuard from '@/features/persona/permission-guard';
+import { uploadService } from '@/services/upload-service';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -19,13 +20,18 @@ export default function UploadPage() {
   const {
     stagedFiles,
     setStagedFiles,
+    fileBinaries,
+    setFileBinaries,
     category,
     setCategory,
     description,
     setDescription,
+    resetBatch,
   } = useAppStore();
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleFilesAdded = (newFiles: File[]) => {
     const metaList = newFiles.map((f) => ({
@@ -34,10 +40,12 @@ export default function UploadPage() {
       category: category,
     }));
     setStagedFiles((prev) => [...prev, ...metaList]);
+    setFileBinaries((prev) => [...prev, ...newFiles]);
   };
 
   const handleRemoveFile = (index: number) => {
     setStagedFiles((prev) => prev.filter((_, i) => i !== index));
+    setFileBinaries((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleNextStep = () => {
@@ -52,9 +60,27 @@ export default function UploadPage() {
     }
   };
 
-  const handleFinalizeUpload = () => {
-    // Redirect directly to /processing
-    router.push('/processing');
+  const handleFinalizeUpload = async () => {
+    if (fileBinaries.length === 0 || isUploading) return;
+
+    setUploadError(null);
+    setIsUploading(true);
+
+    try {
+      const success = await uploadService.uploadDocuments(fileBinaries, category, description);
+      if (!success) {
+        setUploadError('One or more documents failed to upload or process. Review the processing page for backend status.');
+        return;
+      }
+
+      resetBatch();
+      router.push('/processing');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadError('Upload failed. Verify backend availability and your authenticated session.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -141,6 +167,13 @@ export default function UploadPage() {
             onEditMetadata={() => setCurrentStep(2)}
           />
 
+          {uploadError && (
+            <div className="flex gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="font-semibold">{uploadError}</span>
+            </div>
+          )}
+
           {/* Step 3 Actions */}
           <div className="flex justify-between pt-4">
             <button
@@ -154,10 +187,20 @@ export default function UploadPage() {
             <button
               type="button"
               onClick={handleFinalizeUpload}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary/95 text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-sm transition-all cursor-pointer"
+              disabled={isUploading || fileBinaries.length === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary/95 text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-sm transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Continue to AI Processing
-              <Play className="h-4 w-4 fill-current shrink-0" />
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  Uploading & Processing...
+                </>
+              ) : (
+                <>
+                  Upload to AI Processing
+                  <Play className="h-4 w-4 fill-current shrink-0" />
+                </>
+              )}
             </button>
           </div>
         </div>

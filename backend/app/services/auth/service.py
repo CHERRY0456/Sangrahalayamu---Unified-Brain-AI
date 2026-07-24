@@ -128,6 +128,31 @@ PERSONA_MANIFESTS = {
             {'label': 'Organization Insights dashboards', 'actionUrl': '/history'},
         ],
         'defaultRoute': '/dashboard'
+    },
+    'CEO': {
+        'sidebar': [
+            {'label': 'Dashboard', 'path': '/dashboard', 'icon': 'LayoutDashboard'},
+            {'label': 'Upload Files', 'path': '/upload', 'icon': 'UploadCloud'},
+            {'label': 'AI Processing', 'path': '/processing', 'icon': 'Cpu'},
+            {'label': 'AI Chat', 'path': '/chat', 'icon': 'MessageSquare'},
+            {'label': 'RAG Audit', 'path': '/transparency', 'icon': 'Eye'},
+            {'label': 'Audit Logs', 'path': '/audit', 'icon': 'ShieldCheck'},
+            {'label': 'History', 'path': '/history', 'icon': 'History'},
+        ],
+        'dashboard': ['org-kpis', 'downtime-trends', 'ai-usage-analytics', 'risk-heatmap', 'knowledge-coverage', 'recent-uploads', 'access-requests'],
+        'chatSuggestions': [
+            'Show the overall risk profiles of all plants',
+            'What are the macro trends in plant down-time?',
+            'Check general operational compliance status',
+        ],
+        'transparencyFocus': 'Enterprise health, corporate liability, macro KPIs, and resource metrics.',
+        'quickActions': [
+            {'label': 'Strategic Company Outlook', 'actionUrl': '/chat', 'isPlaceholder': True},
+            {'label': 'Enterprise Risk Mitigation', 'actionUrl': '/audit'},
+            {'label': 'Global Downtime Metrics', 'actionUrl': '/transparency'},
+            {'label': 'Corporate Performance Logs', 'actionUrl': '/history'},
+        ],
+        'defaultRoute': '/dashboard'
     }
 }
 

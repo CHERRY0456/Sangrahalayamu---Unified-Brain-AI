@@ -8,11 +8,39 @@ from app.core.config import settings
 from app.models.document import Document
 
 class UploadValidator:
-    ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+    ALLOWED_EXTENSIONS = {
+        ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx",
+        ".csv", ".tsv", ".txt", ".md", ".markdown", ".rtf", ".html",
+        ".htm", ".xml", ".json", ".png", ".jpg", ".jpeg", ".webp",
+        ".tiff", ".tif", ".eml", ".msg", ".log", ".err", ".out",
+        ".py", ".js", ".ts", ".go", ".c", ".cpp", ".h", ".rs",
+        ".java", ".sql", ".sh", ".cfg", ".conf", ".ini", ".svg",
+        ".dwg", ".dxf"
+    }
     ALLOWED_MIME_TYPES = {
         "application/pdf",
+        "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "text/plain"
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain",
+        "text/csv",
+        "text/tab-separated-values",
+        "text/markdown",
+        "text/html",
+        "application/json",
+        "application/xml",
+        "text/xml",
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/tiff",
+        "image/svg+xml",
+        "message/rfc822",
+        "application/octet-stream",
+        ""
     }
 
     @staticmethod
@@ -54,11 +82,14 @@ class UploadValidator:
         if file_ext not in UploadValidator.ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported file extension '{file_ext}'. Supported extensions: PDF, DOCX, TXT."
+                detail=f"Unsupported file extension '{file_ext}'."
             )
 
-        # 5. MIME type validation
-        if content_type not in UploadValidator.ALLOWED_MIME_TYPES:
+        # 5. MIME type validation. Some browsers/OSes submit enterprise file
+        # types as application/octet-stream, so extension + parser-registry
+        # detection remains the primary source of truth.
+        normalized_content_type = content_type or ""
+        if normalized_content_type not in UploadValidator.ALLOWED_MIME_TYPES and not normalized_content_type.startswith(("text/", "image/")):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"MIME type '{content_type}' is not supported for ingestion."

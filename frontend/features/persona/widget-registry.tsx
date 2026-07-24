@@ -3,168 +3,51 @@
 import React from 'react';
 import { ShieldAlert, Wrench, Calendar, FileText, LayoutList, CheckCircle2, TrendingDown, RefreshCw, BarChart4, AlertOctagon, HelpCircle, Lock, Check, X } from 'lucide-react';
 import { usePersonaStore } from './persona-context';
+import { api } from '@/lib/api-client';
 
 export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
-  // 1. Field Technician Widgets
-  'assigned-equipment': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Assigned Equipment</h3>
-      <div className="space-y-1.5 text-xs text-foreground font-semibold">
-        <div className="flex justify-between border-b border-border/40 pb-1.5">
-          <span>Boiler Cylinder B-3</span>
-          <span className="text-emerald-500">Active</span>
-        </div>
-        <div className="flex justify-between border-b border-border/40 pb-1.5">
-          <span>Primary Loop-A Valve</span>
-          <span className="text-emerald-500">Active</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Coolant Pump P-2</span>
-          <span className="text-amber-500">Inspection Due</span>
-        </div>
-      </div>
-    </div>
-  ),
-  'recent-repairs': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recent Repairs</h3>
-      <div className="space-y-1.5 text-xs text-muted-foreground">
-        <p>• <b>Cylinder B-3</b>: Replaced pressure seals (2 days ago)</p>
-        <p>• <b>Coolant Pump P-2</b>: Calibrated flow sensor (5 days ago)</p>
-        <p>• <b>Exhaust Line L-4</b>: Cleared soot obstruction (1 week ago)</p>
-      </div>
-    </div>
-  ),
-  'safety-alerts': () => (
-    <div className="rounded-xl border border-border bg-destructive/10 border-destructive/25 p-4 space-y-2 text-destructive">
-      <div className="flex items-center gap-2">
-        <ShieldAlert className="h-4 w-4 shrink-0" />
-        <h3 className="text-xs font-bold uppercase tracking-wider">Safety Warnings</h3>
-      </div>
-      <p className="text-xs leading-relaxed font-semibold">
-        Boiler 092 is operating near maximum standard pressure. Exceeding 320 PSI triggers shutoff.
-      </p>
-    </div>
-  ),
-  'equipment-history': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Equipment History</h3>
-      <div className="text-xs space-y-1">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Boiler 092 age:</span>
-          <span className="font-bold">4.2 years</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Last overhaul:</span>
-          <span className="font-bold">2025-11-12</span>
-        </div>
-      </div>
-    </div>
-  ),
+  'processing-queue': () => {
+    const [queueCount, setQueueCount] = React.useState<number>(0);
+    const [loading, setLoading] = React.useState(true);
 
-  // 2. Maintenance Engineer Widgets
-  'failure-trends': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Failure Frequency Trends</h3>
-      <div className="flex items-center gap-3">
-        <div className="text-2xl font-black text-foreground">-14%</div>
-        <div className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-          Better vs Q2
-        </div>
-      </div>
-      <p className="text-[10px] text-muted-foreground">Mean Time To Repair (MTTR) dropped to 1.8 hours.</p>
-    </div>
-  ),
-  'maintenance-schedule': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Upcoming Maintenance</h3>
-      <div className="space-y-1 text-xs">
-        <p className="font-semibold">• Boiler 092 Pressure Cal (Tomorrow)</p>
-        <p className="font-semibold">• Coolant Refill Reactor 5 (July 25)</p>
-      </div>
-    </div>
-  ),
-  'uploaded-manuals': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">OEM Manual Index</h3>
-      <div className="text-2xl font-black text-foreground">14 Manuals</div>
-      <p className="text-[10px] text-muted-foreground">Latest: <i>OSHA_Steam_Regulations_2026.pdf</i></p>
-    </div>
-  ),
-  'processing-queue': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">AI Ingestion Pipeline</h3>
-      <div className="flex justify-between items-center text-xs">
-        <span className="text-muted-foreground">Queue Status:</span>
-        <span className="inline-flex items-center gap-1 text-emerald-500 font-bold">
-          <CheckCircle2 className="h-3.5 w-3.5" /> Idle
-        </span>
-      </div>
-    </div>
-  ),
+    React.useEffect(() => {
+      const checkQueue = async () => {
+        try {
+          const data = await api.get<any>('/api/upload'); // using /api/upload since status might not exist
+          const processing = (data.documents || []).filter((d: any) => d.status === 'PROCESSING');
+          setQueueCount(processing.length);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+        }
+      };
+      checkQueue();
+      const interval = setInterval(checkQueue, 10000);
+      return () => clearInterval(interval);
+    }, []);
 
-  // 3. Project Manager Widgets
-  'project-status': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Project Timeline Health</h3>
-      <div className="text-2xl font-black text-foreground">94.2%</div>
-      <p className="text-[10px] text-muted-foreground">On schedule for Q3 plant upgrades.</p>
-    </div>
-  ),
-  'team-progress': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Active Deliverables</h3>
-      <div className="space-y-1 text-xs font-semibold">
-        <div className="flex justify-between">
-          <span>OCR BLUEPRINT INGESTION</span>
-          <span className="text-emerald-500">Done</span>
-        </div>
-        <div className="flex justify-between">
-          <span>SAFETY AUDIT VERIFICATION</span>
-          <span className="text-amber-500">In Progress</span>
+    return (
+      <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">AI Ingestion Pipeline</h3>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-muted-foreground">Queue Status:</span>
+          {loading ? (
+            <span className="text-muted-foreground animate-pulse">Checking...</span>
+          ) : queueCount > 0 ? (
+            <span className="inline-flex items-center gap-1 text-amber-500 font-bold">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" /> {queueCount} Processing
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-emerald-500 font-bold">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Idle
+            </span>
+          )}
         </div>
       </div>
-    </div>
-  ),
-  'project-delays': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Reported Blockers</h3>
-      <p className="text-xs text-amber-500 font-semibold leading-relaxed">
-        • Delay in scheduling physical inspection for Reactor Loop-A.
-      </p>
-    </div>
-  ),
-  'resource-allocation': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Resource Allocation</h3>
-      <div className="text-xs font-bold text-foreground">7 Technicians / 2 Engineers</div>
-      <p className="text-[10px] text-muted-foreground mt-1">Allocation efficiency optimized at 92.5% capacity.</p>
-    </div>
-  ),
+    );
+  },
 
-  // 4. Compliance Widgets
-  'pending-audits': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Compliance Audits</h3>
-      <div className="space-y-1.5 text-xs text-foreground font-semibold">
-        <div className="flex justify-between">
-          <span>OSHA Steam Standard</span>
-          <span className="text-red-500 font-bold">1 Alert</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Reactor Blueprints Audit</span>
-          <span className="text-emerald-500">Completed</span>
-        </div>
-      </div>
-    </div>
-  ),
-  'compliance-status': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Governance Index</h3>
-      <div className="text-3xl font-black text-foreground">98.4%</div>
-      <p className="text-[10px] text-muted-foreground">Platform complies fully with EPA and OSHA acts.</p>
-    </div>
-  ),
   'access-requests': () => {
     const { accessRequests, approveAccessRequest, rejectAccessRequest } = usePersonaStore();
     const pendingRequests = accessRequests.filter((r) => r.status === 'Pending');
@@ -243,41 +126,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
       </div>
     );
   },
-  'transparency-reviews': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">RAG Transparency Reviews</h3>
-      <div className="text-xs space-y-1">
-        <div className="flex justify-between">
-          <span>Total Explainability audits:</span>
-          <span className="font-bold">34 sessions</span>
-        </div>
-      </div>
-    </div>
-  ),
 
-  // 5. Director/Executive Widgets
-  'org-kpis': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Overall Plant KPIs</h3>
-      <div className="grid grid-cols-2 gap-2 text-center text-xs pt-1">
-        <div className="border border-border/40 rounded p-1 bg-secondary/15">
-          <span className="text-[9px] text-muted-foreground block">Safety Rating</span>
-          <b className="text-foreground">99.8%</b>
-        </div>
-        <div className="border border-border/40 rounded p-1 bg-secondary/15">
-          <span className="text-[9px] text-muted-foreground block">OEE efficiency</span>
-          <b className="text-foreground">84.2%</b>
-        </div>
-      </div>
-    </div>
-  ),
-  'downtime-trends': () => (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Operational Downtime</h3>
-      <div className="text-2xl font-black text-foreground">14.5 Hours</div>
-      <p className="text-[10px] text-muted-foreground">Decreased by 2.2 hours since Q2.</p>
-    </div>
-  ),
   'ai-usage-analytics': () => {
     const [auditCount, setAuditCount] = React.useState<number>(0);
     const [loading, setLoading] = React.useState(true);
@@ -285,17 +134,8 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchLogs = async () => {
         try {
-          const accessToken = localStorage.getItem('ib-access-token');
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${baseUrl}/api/audit/events`, {
-            headers: {
-              ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-            }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setAuditCount(data.length || 0);
-          }
+          const data = await api.get<any[]>('/api/audit/events');
+          setAuditCount(data.length || 0);
         } catch (e) {
           console.error(e);
         } finally {
@@ -310,7 +150,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">AI Platform Usage</h3>
         <div className="text-xs space-y-1">
           <div className="flex justify-between">
-            <span>Compliance Audit Logs:</span>
+            <span>Platform Audit Logs:</span>
             <span className="font-bold">{loading ? '...' : auditCount} event{auditCount === 1 ? '' : 's'}</span>
           </div>
           <div className="flex justify-between">
@@ -321,6 +161,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
       </div>
     );
   },
+
   'risk-heatmap': () => {
     const [highRiskCount, setHighRiskCount] = React.useState<number>(0);
     const [loading, setLoading] = React.useState(true);
@@ -328,18 +169,9 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchLogs = async () => {
         try {
-          const accessToken = localStorage.getItem('ib-access-token');
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${baseUrl}/api/audit/events`, {
-            headers: {
-              ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-            }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const criticals = data.filter((d: any) => d.severity === 'HIGH' || d.severity === 'CRITICAL');
-            setHighRiskCount(criticals.length);
-          }
+          const data = await api.get<any[]>('/api/audit/events');
+          const criticals = data.filter((d: any) => d.severity === 'HIGH' || d.severity === 'CRITICAL');
+          setHighRiskCount(criticals.length);
         } catch (e) {
           console.error(e);
         } finally {
@@ -369,6 +201,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
       </div>
     );
   },
+
   'knowledge-coverage': () => {
     const [files, setFiles] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
@@ -376,17 +209,8 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchFiles = async () => {
         try {
-          const accessToken = localStorage.getItem('ib-access-token');
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${baseUrl}/api/upload`, {
-            headers: {
-              ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-            }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setFiles(data.documents || []);
-          }
+          const data = await api.get<any>('/api/upload');
+          setFiles(data.documents || []);
         } catch (e) {
           console.error(e);
         } finally {
@@ -408,6 +232,8 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-semibold">Staged Knowledge Base</h3>
         {loading ? (
           <div className="text-xs font-bold text-muted-foreground animate-pulse">Loading size...</div>
+        ) : files.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic py-1">No knowledge ingested. Database is empty.</div>
         ) : (
           <>
             <div className="text-xs font-bold text-foreground">
@@ -421,6 +247,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
       </div>
     );
   },
+
   'recent-uploads': () => {
     const { persona, isDocumentAccessible } = usePersonaStore();
     const [files, setFiles] = React.useState<any[]>([]);
@@ -429,17 +256,8 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchFiles = async () => {
         try {
-          const accessToken = localStorage.getItem('ib-access-token');
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${baseUrl}/api/upload`, {
-            headers: {
-              ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-            }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setFiles(data.documents || []);
-          }
+          const data = await api.get<any>('/api/upload');
+          setFiles(data.documents || []);
         } catch (e) {
           console.error(e);
         } finally {
@@ -469,7 +287,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
         {loading ? (
           <p className="text-[11px] text-muted-foreground italic text-center py-2 animate-pulse">Loading documents...</p>
         ) : filteredFiles.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground italic text-center py-2">No files accessible in your clearance tier.</p>
+          <p className="text-[11px] text-muted-foreground italic text-center py-4">No documents available in your clearance tier. The database is empty.</p>
         ) : (
           <div className="grid gap-2">
             {filteredFiles.map((file) => (
@@ -498,6 +316,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
       </div>
     );
   },
+
   'my-requests': () => {
     const { profile, accessRequests } = usePersonaStore();
     

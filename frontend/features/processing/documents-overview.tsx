@@ -6,12 +6,14 @@ interface DocumentsOverviewProps {
   files: StagedFileMeta[];
   onRemoveFile: (index: number) => void;
   onAddPlaceholder: () => void;
+  readOnly?: boolean;
 }
 
 export default function DocumentsOverview({
   files,
   onRemoveFile,
   onAddPlaceholder,
+  readOnly = false,
 }: DocumentsOverviewProps) {
   
   const formatBytes = (bytes: number) => {
@@ -28,7 +30,7 @@ export default function DocumentsOverview({
     <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-md font-semibold text-foreground">Staged Document Batch</h2>
+          <h2 className="text-md font-semibold text-foreground">Document Processing Status</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             Total files: <b>{files.length}</b> • Total batch size: <b>{formatBytes(totalSize)}</b>
           </p>
@@ -50,14 +52,14 @@ export default function DocumentsOverview({
               <th className="p-3">File Name</th>
               <th className="p-3">Category</th>
               <th className="p-3">Size</th>
-              <th className="p-3 text-right">Action</th>
+              {!readOnly && <th className="p-3 text-right">Action</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40 text-xs">
             {files.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-8 text-center text-muted-foreground italic">
-                  No staged files in context. Click "Add Document" above to insert sample files.
+                <td colSpan={readOnly ? 3 : 4} className="p-8 text-center text-muted-foreground italic">
+                  No documents uploaded. Upload enterprise documents to start processing.
                 </td>
               </tr>
             ) : (
@@ -71,16 +73,18 @@ export default function DocumentsOverview({
                   </td>
                   <td className="p-3 text-muted-foreground">{file.category}</td>
                   <td className="p-3 text-muted-foreground">{formatBytes(file.size)}</td>
-                  <td className="p-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onRemoveFile(idx)}
-                      className="inline-flex items-center justify-center rounded p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer"
-                      title="Remove File"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
+                  {!readOnly && (
+                    <td className="p-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onRemoveFile(idx)}
+                        className="inline-flex items-center justify-center rounded p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer"
+                        title="Remove File"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}

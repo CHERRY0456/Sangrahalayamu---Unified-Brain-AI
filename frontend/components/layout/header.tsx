@@ -119,7 +119,7 @@ export default function Header({ onToggleSidebar, onOpenMobile }: HeaderProps) {
               {getInitials()}
             </div>
             
-            {/* Mock Dropdown on hover */}
+            {/* Profile Dropdown on hover */}
             <div className="absolute right-0 mt-2 w-52 origin-top-right rounded-lg border border-border bg-card p-2 shadow-md hidden group-hover:block animate-in fade-in slide-in-from-top-1 duration-100">
               <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground border-b border-border mb-1 space-y-0.5">
                 <div className="font-extrabold text-foreground truncate">

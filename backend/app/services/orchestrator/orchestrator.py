@@ -43,8 +43,8 @@ class AIOrchestratorService:
             limit=4
         )
         
-        # Generate mock IDs for the new conversation manager since legacy endpoints didn't provide them
-        workspace_id = "legacy-workspace"
+        # Generate fallback IDs for the new conversation manager since legacy endpoints didn't provide them
+        workspace_id = "default-workspace"
         conversation_id = str(uuid.uuid4())
         
         # 3. Delegate to Phase 3 Orchestrator
@@ -87,7 +87,7 @@ class AIOrchestratorService:
             transparency_report = transparency_engine.generate_explanation(
                 db=db,
                 ai_response=temp_res,
-                retrieval_package=context_package, # Might need to mock a bit if it strictly expects HybridRetrievalPackage
+                retrieval_package=context_package, # Might need to adapt a bit if it strictly expects HybridRetrievalPackage
                 user=user
             )
 

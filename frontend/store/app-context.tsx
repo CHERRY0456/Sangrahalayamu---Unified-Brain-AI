@@ -26,6 +26,8 @@ interface AppContextType {
   // Upload batch files
   stagedFiles: StagedFileMeta[];
   setStagedFiles: React.Dispatch<React.SetStateAction<StagedFileMeta[]>>;
+  fileBinaries: File[];
+  setFileBinaries: React.Dispatch<React.SetStateAction<File[]>>;
   
   // Metadata batch details
   category: string;
@@ -62,6 +64,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stagedFiles, setStagedFiles] = useState<StagedFileMeta[]>([]);
+  const [fileBinaries, setFileBinaries] = useState<File[]>([]);
   const [category, setCategoryState] = useState('Other');
   const [description, setDescriptionState] = useState('');
   const [retrievalMode, setRetrievalModeState] = useState<RetrievalMode>('automatic');
@@ -74,7 +77,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Sync with localStorage on mount (persistence layer)
   useEffect(() => {
     try {
-      const savedFiles = localStorage.getItem('ib-staged-files');
       const savedCategory = localStorage.getItem('ib-batch-category');
       const savedDesc = localStorage.getItem('ib-batch-desc');
       const savedMode = localStorage.getItem('ib-retrieval-mode');
@@ -83,7 +85,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedTheme = localStorage.getItem('ib-theme') as ThemePalette;
       const savedAppMode = localStorage.getItem('ib-mode') as AppearanceMode;
 
-      if (savedFiles) setStagedFiles(JSON.parse(savedFiles));
       if (savedCategory) setCategoryState(savedCategory);
       if (savedDesc) setDescriptionState(savedDesc);
       if (savedMode) setRetrievalModeState(savedMode as RetrievalMode);
@@ -140,26 +141,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (stagedFiles.length > 0) {
-      localStorage.setItem('ib-staged-files', JSON.stringify(stagedFiles));
-    } else {
-      localStorage.removeItem('ib-staged-files');
-    }
-  }, [stagedFiles]);
-
-  useEffect(() => {
     localStorage.setItem('ib-processing-options', JSON.stringify(processingOptions));
   }, [processingOptions]);
 
   const resetBatch = () => {
     setStagedFiles([]);
+    setFileBinaries([]);
     setCategoryState('Other');
     setDescriptionState('');
     setRetrievalModeState('automatic');
     setProcessingOptions(defaultProcessingOptions);
     
     // Clear persistence keys
-    localStorage.removeItem('ib-staged-files');
     localStorage.removeItem('ib-batch-category');
     localStorage.removeItem('ib-batch-desc');
     localStorage.removeItem('ib-retrieval-mode');
@@ -170,6 +163,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         stagedFiles,
         setStagedFiles,
+        fileBinaries,
+        setFileBinaries,
         category,
         setCategory,
         description,

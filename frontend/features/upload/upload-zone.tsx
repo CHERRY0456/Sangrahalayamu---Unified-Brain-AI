@@ -30,10 +30,13 @@ export default function UploadZone({ onFilesAdded, disabled }: UploadZoneProps) 
     setValidationError(null);
 
     const allowedExtensions = [
-      '.pdf', '.docx', '.xlsx', '.pptx', '.txt',
-      '.png', '.jpg', '.jpeg', '.tiff', '.bmp',
-      '.mp3', '.wav', '.m4a', '.flac',
-      '.dwg', '.dxf', '.svg'
+      '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',
+      '.csv', '.tsv', '.txt', '.md', '.markdown', '.rtf', '.html',
+      '.htm', '.xml', '.json', '.png', '.jpg', '.jpeg', '.webp',
+      '.tiff', '.tif', '.eml', '.msg', '.log', '.err', '.out',
+      '.py', '.js', '.ts', '.go', '.c', '.cpp', '.h', '.rs',
+      '.java', '.sql', '.sh', '.cfg', '.conf', '.ini', '.svg',
+      '.dwg', '.dxf'
     ];
     const maxSizeBytes = 100 * 1024 * 1024; // 100MB
     const validFiles: File[] = [];
@@ -44,7 +47,7 @@ export default function UploadZone({ onFilesAdded, disabled }: UploadZoneProps) 
 
       // Check type
       if (!allowedExtensions.includes(extension)) {
-        setValidationError(`Format "${extension}" is not supported. Please upload documents (PDF, DOCX, XLSX, PPTX, TXT), images (PNG, JPG, TIFF), audios (MP3, WAV), or CAD drawings (DWG, DXF, SVG).`);
+        setValidationError(`Format "${extension}" is not supported by the parser registry.`);
         return;
       }
 
@@ -104,7 +107,7 @@ export default function UploadZone({ onFilesAdded, disabled }: UploadZoneProps) 
           disabled={disabled}
           onChange={handleFileChange}
           className="hidden"
-          accept=".pdf,.docx,.xlsx,.pptx,.txt,.png,.jpg,.jpeg,.tiff,.bmp,.mp3,.wav,.m4a,.flac,.dwg,.dxf,.svg"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.txt,.md,.markdown,.rtf,.html,.htm,.xml,.json,.png,.jpg,.jpeg,.webp,.tiff,.tif,.eml,.msg,.log,.err,.out,.py,.js,.ts,.go,.c,.cpp,.h,.rs,.java,.sql,.sh,.cfg,.conf,.ini,.svg,.dwg,.dxf"
         />
 
         <div className="rounded-full bg-primary/10 p-4 text-primary mb-4 shadow-sm">
@@ -115,7 +118,7 @@ export default function UploadZone({ onFilesAdded, disabled }: UploadZoneProps) 
           Drag and drop files here, or <span className="text-primary hover:underline">browse</span>
         </h3>
         <p className="mt-1 text-[11px] text-muted-foreground leading-normal max-w-xs">
-          Supports multi-file selection of documents, images, audios, and CAD drawings up to 100MB per file.
+          Supports multi-file selection of documents, spreadsheets, logs, images, source files, and supported engineering exports.
         </p>
       </div>
 

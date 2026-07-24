@@ -78,7 +78,7 @@ export default function ResetPasswordForm() {
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const res = await fetch(`${baseUrl}/api/auth/reset-password`, {
+      const res = await fetch(`${baseUrl}/api/auth/reset-password`, { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: resetToken, new_password: password }),

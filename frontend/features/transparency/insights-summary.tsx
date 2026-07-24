@@ -18,7 +18,7 @@ export default function InsightsSummary({
 
   if (!explanation) return null;
 
-  // Mock static values for explanation properties if missing
+  // Default static values for explanation properties if missing
   const activeMode = explanation.docCoverage.includes('documents') ? 'Vector-RAG' : 'Schema-constrained';
   const pipelineTasks = ['Summarization', 'Entities Ingress', 'Key Insights'];
 
@@ -117,7 +117,7 @@ export default function InsightsSummary({
             AI Decision Summary
           </span>
           <p className="text-xs text-muted-foreground/90 leading-relaxed font-normal">
-            This answer was formulated because the queried engineering valve parameter (<b>V-402</b>) matches threshold tables on <b>Page 3</b> of the blueprint specs. Conflicting logs were resolved using active vector context weighting.
+            {explanation.aiDecisionSummary || 'This answer was synthesized from the most relevant retrieved text chunks and knowledge graph relationships. Conflicts were resolved via context weighting.'}
           </p>
         </div>
 
@@ -128,14 +128,15 @@ export default function InsightsSummary({
             Potential Limitations
           </span>
           <div className="text-xs text-muted-foreground/80 leading-relaxed space-y-1 font-normal">
-            <div className="flex gap-1 items-start">
-              <span className="text-amber-500 font-bold">•</span>
-              <span>Vector chunks do not parse non-tabular drawing layers.</span>
-            </div>
-            <div className="flex gap-1 items-start">
-              <span className="text-amber-500 font-bold">•</span>
-              <span>Maintenance history excludes Reactor Unit 4 records.</span>
-            </div>
+            {(explanation.potentialLimitations || [
+              'Vector chunks do not natively parse non-tabular drawing layers.',
+              'Database might lack recent unstructured inputs until ingestion completes.',
+            ]).map((lim, idx) => (
+              <div key={idx} className="flex gap-1 items-start">
+                <span className="text-amber-500 font-bold">•</span>
+                <span>{lim}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -146,11 +147,11 @@ export default function InsightsSummary({
             Suggested Follow-up
           </span>
           <div className="grid gap-1.5">
-            {[
-              'Inspect SV-901 valve settings',
-              'Check Reactor Unit 5 safety logs',
-              'View flow calibration guidelines',
-            ].map((q, idx) => (
+            {(explanation.suggestedFollowUp || [
+              'Provide a breakdown of the sources cited.',
+              'Expand on the recent compliance changes.',
+              'Show associated risks or constraints.',
+            ]).map((q, idx) => (
               <button
                 key={idx}
                 onClick={() => router.push('/chat')}

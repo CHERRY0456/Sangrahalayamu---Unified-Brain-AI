@@ -34,7 +34,7 @@ class AIOrchestrator:
         agent_results = await agent_orchestrator.execute_agents(agent_context)
         
         # 3. Build prompt
-        system_prompt, user_prompt = prompt_engine.generate_prompt(query, context_package, history, agent_results)
+        system_prompt, user_prompt = prompt_engine.generate_prompt(query, context_package, history, agent_results, user_role=user.role.name)
         
         req = GenerationRequest(
             prompt=user_prompt,
@@ -94,7 +94,7 @@ class AIOrchestrator:
         agent_context = AgentContext(query=query, workspace_id=workspace_id, user_id=user.id, parameters={})
         agent_results = await agent_orchestrator.execute_agents(agent_context)
         
-        system_prompt, user_prompt = prompt_engine.generate_prompt(query, context_package, history, agent_results)
+        system_prompt, user_prompt = prompt_engine.generate_prompt(query, context_package, history, agent_results, user_role=user.role.name)
         
         req = GenerationRequest(
             prompt=user_prompt,

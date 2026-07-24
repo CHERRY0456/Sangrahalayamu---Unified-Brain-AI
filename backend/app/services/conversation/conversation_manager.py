@@ -16,7 +16,7 @@ class BaseConversationManager(ABC):
     @abstractmethod
     def get_conversation_history(self, db: Session, conversation_id: str, user_id: int, workspace_id: str, limit: int = 10) -> List[Dict[str, str]]:
         pass
-        
+
     @abstractmethod
     def add_message(self, db: Session, conversation_id: str, user_id: int, workspace_id: str, role: str, content: str, metadata: dict = None):
         pass
@@ -67,25 +67,25 @@ class PostgresConversationManager(BaseConversationManager):
 
     def get_conversation_history(self, db: Session, conversation_id: str, user_id: int, workspace_id: str, limit: int = 10) -> List[Dict[str, str]]:
         self._check_table(db)
-        
+
         # We only retrieve messages for the explicit user/workspace to prevent data leakage
         query = text("""
-            SELECT role, content 
+            SELECT role, content
             FROM conversation_messages
-            WHERE conversation_id = :conv_id 
-              AND user_id = :user_id 
+            WHERE conversation_id = :conv_id
+              AND user_id = :user_id
               AND workspace_id = :workspace_id
             ORDER BY created_at DESC
             LIMIT :limit
         """)
-        
+
         result = db.execute(query, {
             "conv_id": conversation_id,
             "user_id": user_id,
             "workspace_id": workspace_id,
             "limit": limit
         }).fetchall()
-        
+
         # Result is ordered by DESC (newest first). We need to return it in chronological order.
         history = [{"role": row[0], "content": row[1]} for row in result]
         history.reverse()
@@ -93,12 +93,12 @@ class PostgresConversationManager(BaseConversationManager):
 
     def add_message(self, db: Session, conversation_id: str, user_id: int, workspace_id: str, role: str, content: str, metadata: dict = None):
         self._check_table(db)
-        
+
         query = text("""
             INSERT INTO conversation_messages (id, conversation_id, user_id, workspace_id, role, content, metadata, created_at)
             VALUES (:id, :conv_id, :user_id, :workspace_id, :role, :content, :metadata, :created_at)
         """)
-        
+
         db.execute(query, {
             "id": str(uuid.uuid4()),
             "conv_id": conversation_id,
@@ -138,7 +138,7 @@ class PostgresConversationManager(BaseConversationManager):
             "workspace_id": workspace_id,
             "limit": limit
         }).fetchall()
-        
+
         conversations = []
         for row in result:
             conv_id = str(row[0])
@@ -173,8 +173,8 @@ class PostgresConversationManager(BaseConversationManager):
         query = text("""
             SELECT id, role, content, metadata, created_at
             FROM conversation_messages
-            WHERE conversation_id = :conv_id 
-              AND user_id = :user_id 
+            WHERE conversation_id = :conv_id
+              AND user_id = :user_id
               AND workspace_id = :workspace_id
             ORDER BY created_at ASC
             LIMIT :limit
@@ -185,7 +185,7 @@ class PostgresConversationManager(BaseConversationManager):
             "workspace_id": workspace_id,
             "limit": limit
         }).fetchall()
-        
+
         messages = []
         for row in result:
             msg_id = str(row[0])
@@ -193,17 +193,17 @@ class PostgresConversationManager(BaseConversationManager):
             content = row[2]
             meta = row[3]
             created_at = row[4]
-            
+
             # If metadata is string, parse it
             if isinstance(meta, str):
                 try:
                     meta = json.loads(meta)
                 except:
                     meta = {}
-            
+
             # Map role to sender
             sender = 'user' if role == 'user' else 'ai'
-            
+
             messages.append({
                 "id": msg_id,
                 "sender": sender,
@@ -215,6 +215,12 @@ class PostgresConversationManager(BaseConversationManager):
 
     def get_message(self, db: Session, message_id: str, user_id: int) -> Optional[Dict[str, Any]]:
         self._check_table(db)
+        import uuid
+        try:
+            uuid.UUID(message_id)
+        except ValueError:
+            return None
+
         query = text("""
             SELECT id, role, content, metadata, created_at, conversation_id, workspace_id
             FROM conversation_messages
@@ -223,14 +229,14 @@ class PostgresConversationManager(BaseConversationManager):
         row = db.execute(query, {"msg_id": message_id, "user_id": user_id}).fetchone()
         if not row:
             return None
-        
+
         meta = row[3]
         if isinstance(meta, str):
             try:
                 meta = json.loads(meta)
             except:
                 meta = {}
-                
+
         return {
             "id": str(row[0]),
             "role": row[1],

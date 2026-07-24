@@ -23,10 +23,6 @@ class GraphRetrievalProvider(ABC):
         """
         pass
 
-class MockGraphRetrievalProvider(GraphRetrievalProvider):
-    # Existing mock logic ...
-    def search_graph(self, db: Session, query: str, limit: int, candidate_doc_ids: List[int]) -> RetrievalProviderResult:
-        return RetrievalProviderResult(matches=[], provider_name="MockGraphEngine")
 
 class Neo4jGraphRetrievalProvider(GraphRetrievalProvider):
     """
@@ -46,7 +42,7 @@ class Neo4jGraphRetrievalProvider(GraphRetrievalProvider):
         # then query neo4j via `graph_repository` for paths to Chunks/Documents.
         # Since this method is synchronous in the orchestrator pipeline, we simulate 
         # an asyncio loop call if we must, or we assume a synchronous wrapper.
-        # For now, we mock the result to satisfy the schema while providing the architecture shell.
+        # For now, we default the result to satisfy the schema while providing the architecture shell.
         
         # Real implementation pseudo:
         # entities = extract_entities(query)

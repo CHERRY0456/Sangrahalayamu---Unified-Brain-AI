@@ -18,6 +18,9 @@ export interface ExplanationData {
   reasoningSteps: ExplanationReasoningStep[];
   citations: ExplanationCitation[];
   graph: ExplanationGraph;
+  aiDecisionSummary?: string;
+  potentialLimitations?: string[];
+  suggestedFollowUp?: string[];
 }
 
 interface TransparencyPanelProps {

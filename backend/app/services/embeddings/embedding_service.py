@@ -23,30 +23,8 @@ class EmbeddingService:
         if provider_enum == EmbeddingProviderEnum.BEDROCK:
             return BedrockEmbeddingProvider()
         else:
-            # Fallback to a mock provider if configured, or raise
-            if provider_enum == EmbeddingProviderEnum.MOCK:
-                return self._mock_provider()
-            logger.warning(f"Embedding provider {provider_enum} not implemented. Falling back to Bedrock.")
+            logger.warning(f"Embedding provider {provider_enum} not fully implemented. Falling back to Bedrock.")
             return BedrockEmbeddingProvider()
-
-    def _mock_provider(self) -> BaseEmbeddingProvider:
-        class MockProvider(BaseEmbeddingProvider):
-            def embed_text(self, text: str) -> EmbeddingVector:
-                return self.embed_batch([text])[0]
-            
-            def embed_batch(self, texts: List[str]) -> List[EmbeddingVector]:
-                import random
-                dim = settings.embedding.dimension
-                return [
-                    EmbeddingVector(
-                        vector=[random.random() for _ in range(dim)],
-                        model="mock-model",
-                        provider=EmbeddingProviderEnum.MOCK,
-                        dimensions=dim,
-                        usage={"input_tokens": len(t.split())}
-                    ) for t in texts
-                ]
-        return MockProvider()
 
     def embed_text(self, text: str) -> EmbeddingVector:
         return self.provider.embed_text(text)

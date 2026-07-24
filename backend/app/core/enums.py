@@ -28,20 +28,17 @@ class OCRProviderEnum(str, Enum):
     TESSERACT = "tesseract"
     TEXTRACT = "textract"
     DOCLING = "docling"
-    MOCK = "mock"
 
 class LLMProviderEnum(str, Enum):
     BEDROCK = "bedrock"
     OPENAI = "openai"
     AZURE = "azure"
     ANTHROPIC = "anthropic"
-    MOCK = "mock"
 
 class EmbeddingProviderEnum(str, Enum):
     BEDROCK = "bedrock"
     OPENAI = "openai"
     SENTENCE_TRANSFORMERS = "sentence_transformers"
-    MOCK = "mock"
 
 class ChunkStrategyEnum(str, Enum):
     SEMANTIC = "semantic"

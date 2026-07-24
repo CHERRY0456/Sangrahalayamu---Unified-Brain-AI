@@ -22,23 +22,22 @@ export class ApiClient {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
 
-    // 2. Resolve JWT access token from localStorage
-    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('ib-access-token') : null;
-    const authHeaders: Record<string, string> = {};
-    if (accessToken) {
-      authHeaders['Authorization'] = `Bearer ${accessToken}`;
-    }
-
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...authHeaders,
       ...(options.headers as Record<string, string> || {}),
     };
+
+    // Auto-set JSON content type only if body is not FormData
+    if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    } else if (!options.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     try {
       const response = await fetch(url, {
         ...options,
         headers,
+        credentials: 'include',
         signal: controller.signal,
       });
 
@@ -48,13 +47,11 @@ export class ApiClient {
       if (response.status === 401 && !this.isRefreshing) {
         const refreshed = await this.handleTokenRefresh();
         if (refreshed) {
-          // Re-trigger the request once with fresh token
+          // Re-trigger the request once with fresh cookie
           return this.request<T>(path, options, timeoutMs);
         } else {
           // Refresh failed — clear session and redirect to login
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('ib-access-token');
-            localStorage.removeItem('ib-refresh-token');
             eraseCookie(SESSION_TOKEN_KEY);
             window.location.href = '/login';
           }
@@ -85,25 +82,18 @@ export class ApiClient {
 
   /**
    * Performs JWT token refresh against POST /api/auth/refresh.
-   * On success, writes new tokens to localStorage and returns true.
+   * On success, backend rotates HttpOnly cookies.
    */
   private async handleTokenRefresh(): Promise<boolean> {
     this.isRefreshing = true;
     try {
-      const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('ib-refresh-token') : null;
-      if (!refreshToken) return false;
-
       const res = await fetch(`${this.baseUrl}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: 'include',
       });
 
       if (!res.ok) return false;
-
-      const tokens = await res.json();
-      localStorage.setItem('ib-access-token', tokens.access_token);
-      localStorage.setItem('ib-refresh-token', tokens.refresh_token);
       return true;
     } catch (e) {
       console.error('Token refresh failed:', e);
@@ -133,4 +123,5 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+export const api = apiClient;
 export default apiClient;

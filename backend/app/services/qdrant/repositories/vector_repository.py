@@ -17,10 +17,14 @@ class VectorRepository:
             kwargs["api_key"] = settings.qdrant.api_key
             
         # Use gRPC if configured, otherwise REST
-        # Here we just use the REST port for simplicity via the standard constructor
+        # If host starts with http, we must use the `url` parameter in QdrantClient
+        if settings.qdrant.host.startswith("http"):
+            kwargs["url"] = settings.qdrant.host
+        else:
+            kwargs["host"] = settings.qdrant.host
+            kwargs["port"] = settings.qdrant.port
+
         self.client = QdrantClient(
-            host=settings.qdrant.host,
-            port=settings.qdrant.port,
             https=settings.qdrant.use_https,
             timeout=settings.qdrant.timeout,
             **kwargs

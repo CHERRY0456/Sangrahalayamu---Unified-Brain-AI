@@ -117,7 +117,7 @@ export default function ComparisonPanel({ snapA, snapB }: ComparisonPanelProps) 
 
       </div>
 
-      {/* Mock Diff Analysis Summary */}
+      {/* Diff Analysis Summary */}
       <div className="rounded-lg border border-border bg-secondary/15 p-4 space-y-3">
         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block flex items-center gap-1">
           <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
@@ -125,13 +125,13 @@ export default function ComparisonPanel({ snapA, snapB }: ComparisonPanelProps) 
         </span>
         <div className="text-xs text-muted-foreground/90 leading-relaxed space-y-2 font-normal">
           <p>
-            • **Source Overlap**: Snapshot A and B share no intersecting documents. Snapshot A was generated using compliance guidelines, whereas Snapshot B is driven primarily by maintenance data logs.
+            • **Source Overlap**: Determines if the generated responses shared context documents or relied on distinct knowledge bases.
           </p>
           <p>
-            • **Pipeline Divergence**: Snapshot B required a deeper relationship inspection pass to parse tabular columns, resulting in a slightly lower Explainability score ({snapB.explainabilityScore}/100) due to raw table opacity.
+            • **Pipeline Divergence**: Highlights variations in retrieval modes (e.g. Graph vs Vector) or processing requirements that may have impacted the explainability score (Score A: {snapA.explainabilityScore}, Score B: {snapB.explainabilityScore}).
           </p>
           <p>
-            • **Confidence Variance**: Snapshot A has a higher vector match confidence rank (+{Math.abs(snapA.confidenceScore - snapB.confidenceScore)}%) because it maps direct keyword definitions.
+            • **Confidence Variance**: Explains the ({Math.abs(snapA.confidenceScore - snapB.confidenceScore)}%) difference in confidence based on semantic similarity weights and context relevance.
           </p>
         </div>
       </div>

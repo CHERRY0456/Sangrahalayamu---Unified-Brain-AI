@@ -8,9 +8,10 @@ import { Search } from 'lucide-react';
 
 interface AuditDashboardProps {
   events: AuditEvent[];
+  summaryStats?: any;
 }
 
-export default function AuditDashboard({ events }: AuditDashboardProps) {
+export default function AuditDashboard({ events, summaryStats }: AuditDashboardProps) {
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
@@ -25,13 +26,13 @@ export default function AuditDashboard({ events }: AuditDashboardProps) {
     setIsDrawerOpen(true);
   };
 
-  // KPI Calculations
-  const totalConversations = 6;
-  const docsUploaded = 14;
-  const aiResponses = 88;
-  const transparencySessions = 34;
-  const accessRequests = 5;
-  const processingJobs = 21;
+  // KPI Calculations using real data or fallback to 0
+  const totalConversations = summaryStats?.totalConversations || 0;
+  const docsUploaded = summaryStats?.docsUploaded || 0;
+  const aiResponses = summaryStats?.aiResponses || 0;
+  const transparencySessions = summaryStats?.transparencySessions || 0;
+  const accessRequests = summaryStats?.accessRequests || 0;
+  const processingJobs = summaryStats?.processingJobs || 0;
 
   // Filter Event Logs
   const filteredEvents = events.filter((ev) => {

@@ -75,3 +75,14 @@ def get_audit_events(
             "metadata": meta
         })
     return result
+
+@router.get("/summary", status_code=status.HTTP_200_OK)
+def get_audit_summary(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves compliance audit summary metrics. Accessible by authorized authenticated users.
+    """
+    stats = AuditLogRepository.get_audit_summary_stats(db=db)
+    return stats

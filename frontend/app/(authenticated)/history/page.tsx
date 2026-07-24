@@ -18,7 +18,7 @@ export default function HistoryPage() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const token = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/chat/conversations`, {
+        const res = await fetch(`${baseUrl}/api/chat/conversations`, { credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -61,7 +61,7 @@ export default function HistoryPage() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const token = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/chat/conversations/${activeId}/messages`, {
+        const res = await fetch(`${baseUrl}/api/chat/conversations/${activeId}/messages`, { credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),

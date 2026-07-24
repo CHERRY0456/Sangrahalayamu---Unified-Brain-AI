@@ -8,7 +8,7 @@ from .models import (
     GenerationMetadata
 )
 from .prompt_builder import RAGPromptBuilder
-from .providers import LLMProvider, MockBedrockProvider, BedrockProvider
+from .providers import LLMProvider, BedrockProvider
 from .validator import RAGResponseValidator
 from .citations import CitationGenerator
 from .context import ConversationalContextResolver
@@ -26,7 +26,6 @@ __all__ = [
     "GenerationMetadata",
     "RAGPromptBuilder",
     "LLMProvider",
-    "MockBedrockProvider",
     "BedrockProvider",
     "RAGResponseValidator",
     "CitationGenerator",

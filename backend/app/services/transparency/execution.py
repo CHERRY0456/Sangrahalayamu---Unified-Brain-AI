@@ -6,8 +6,8 @@ class ExecutionTimingTracer:
     def trace(ai_response: AIResponse) -> ExecutionTrace:
         meta = ai_response.generation_metadata
         
-        provider = meta.provider if meta else "MockBedrock"
-        model = meta.model if meta else "mock-titan"
+        provider = meta.provider if meta else "AWSBedrock"
+        model = meta.model if meta else "unknown"
         template = meta.prompt_template if meta else "enterprise_default"
 
         return ExecutionTrace(

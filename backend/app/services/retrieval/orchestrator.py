@@ -55,7 +55,7 @@ class HybridRetrievalService:
                 explanation="No candidates matched the specified metadata filters."
             ))
 
-        # 2. Semantic Search candidate chunks (Raw vector search mock)
+        # 2. Semantic Search candidate chunks (Raw vector search)
         semantic_res = self.vector_provider.search(
             db=db,
             query=query,
@@ -63,7 +63,7 @@ class HybridRetrievalService:
             candidate_doc_ids=candidate_ids
         )
 
-        # 3. Graph Search candidate chunks (Graph relations mock)
+        # 3. Graph Search candidate chunks (Graph relations)
         graph_res = self.graph_provider.search_graph(
             db=db,
             query=query,

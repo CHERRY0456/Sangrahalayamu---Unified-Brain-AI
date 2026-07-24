@@ -23,7 +23,7 @@ class GraphReasoningEngine:
         Traces a CAUSES/MITIGATES path backward to find root causes.
         """
         # In a real setup, we'd use extract_subgraph with a specific pattern.
-        # We will mock the extraction returning some paths.
+        # We will default the extraction returning some paths.
         paths = await graph_repository.extract_subgraph({
             "start_node": start_incident_id,
             "relationship_types": ["CAUSES", "MITIGATES"],

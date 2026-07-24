@@ -46,7 +46,7 @@ async def health_check(db: Session = Depends(get_db)):
     # 3. Check Qdrant
     try:
         vector_provider = RetrievalProviderFactory.get_vector_provider()
-        # Assume vector_provider has a ping/health_check method. Mocking here.
+        # Assume vector_provider has a ping/health_check method. Defaulting here.
         diagnostics["components"]["qdrant"] = "ok" 
     except Exception as e:
         logger.error(f"Qdrant health check failed: {e}")

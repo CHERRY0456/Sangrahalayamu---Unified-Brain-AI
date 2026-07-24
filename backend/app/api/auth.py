@@ -1,34 +1,82 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Response, Request
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models.user import User
 from app.api.deps import get_current_user
 from app.schemas.auth import UserLoginRequest, TokenRefreshRequest, TokenResponse, UserMeResponse, ForgotPasswordRequest, ResetPasswordRequest
+from app.core.config import settings
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/login", response_model=TokenResponse)
-def login(login_data: UserLoginRequest, db: Session = Depends(get_db)):
-    """
-    Authenticates email & password credentials, returning signed access and refresh tokens.
-    """
-    return AuthService.authenticate_user(db, login_data)
+def _set_auth_cookies(response: Response, tokens: TokenResponse):
+    """Helper to set authentication cookies securely."""
+    secure_cookie = settings.app.env.value == "production"
 
-@router.post("/refresh", response_model=TokenResponse)
-def refresh(refresh_data: TokenRefreshRequest, db: Session = Depends(get_db)):
+    # HttpOnly access token
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=3600  # 1 hour
+    )
+    # HttpOnly refresh token
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=86400 * 7  # 7 days
+    )
+    # Non-HttpOnly token for frontend middleware state detection
+    response.set_cookie(
+        key="ib-session-token",
+        value="authenticated",
+        httponly=False,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=3600
+    )
+
+@router.post("/login", response_model=dict)
+def login(login_data: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
     """
-    Validates current active refresh token to rotate credentials and issue new tokens.
+    Authenticates email & password credentials, setting signed access and refresh tokens as cookies.
     """
-    return AuthService.rotate_tokens(db, refresh_data.refresh_token)
+    tokens = AuthService.authenticate_user(db, login_data)
+    _set_auth_cookies(response, tokens)
+    return {"message": "Login successful"}
+
+@router.post("/refresh", response_model=dict)
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Validates current active refresh token from cookies to rotate credentials and issue new cookies.
+    """
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Refresh token missing")
+
+    tokens = AuthService.rotate_tokens(db, refresh_token)
+    _set_auth_cookies(response, tokens)
+    return {"message": "Tokens refreshed successfully"}
 
 @router.post("/logout")
-def logout(refresh_data: TokenRefreshRequest, db: Session = Depends(get_db)):
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Logs out the session, revoking/invalidating the active refresh token.
+    Logs out the session, revoking/invalidating the active refresh token and clearing cookies.
     """
-    AuthService.logout(db, refresh_data.refresh_token)
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        AuthService.logout(db, refresh_token)
+
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    response.delete_cookie("ib-session-token")
     return {"message": "Session successfully invalidated."}
 
 @router.get("/me", response_model=UserMeResponse)
@@ -53,4 +101,3 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     Revokes all existing sessions for security.
     """
     return AuthService.reset_password(db, payload.token, payload.new_password)
-

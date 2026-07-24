@@ -1,9 +1,14 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import computed_field, Field, field_validator, model_validator
 from typing import Optional
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Resolve path to .env file relative to this file's directory (backend/app/core)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+env_file_path = BASE_DIR / ".env"
+
+load_dotenv(dotenv_path=env_file_path)
 
 from app.core.enums import (
     EnvironmentEnum, LogLevelEnum, StorageProviderEnum, 
@@ -233,7 +238,7 @@ class PerformanceSettings(BaseSettings):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(env_file_path),
         env_file_encoding="utf-8",
         extra="ignore"
     )

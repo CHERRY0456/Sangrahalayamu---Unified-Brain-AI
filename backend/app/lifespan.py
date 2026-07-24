@@ -40,7 +40,7 @@ def _validate_configuration() -> None:
         errors.append("SECRET_KEY is missing or shorter than 32 characters.")
     if not settings.database.url:
         errors.append("DATABASE_URL is not configured.")
-    if settings.llm.provider not in ("bedrock", "mock", "openai", "anthropic", "qwen"):
+    if settings.llm.provider not in ("bedrock", "openai", "anthropic", "qwen"):
         errors.append(f"LLM_PROVIDER '{settings.llm.provider}' is not a recognised provider.")
     if settings.notifications.provider not in ("in_app", "email", "slack", "teams"):
         errors.append(f"NOTIFICATION_PROVIDER '{settings.notifications.provider}' is not recognised.")

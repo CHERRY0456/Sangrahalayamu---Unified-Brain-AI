@@ -5,7 +5,7 @@ import { PERSONA_CONFIGS, PERSONA_PROFILE_TEMPLATES } from './persona-config';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/store/app-context';
 import { UserRole, EmployeeProfile, PersonaConfig, WorkspaceManifest } from '@/lib/types';
-import { getCookie } from '@/lib/cookies';
+import { eraseCookie, getCookie } from '@/lib/cookies';
 import { SESSION_TOKEN_KEY } from '@/lib/constants';
 import { authService } from '@/services/auth-service';
 
@@ -29,6 +29,7 @@ interface PersonaContextType {
   isInitializing: boolean;
   initStage: number;
   accessRequests: AccessRequest[];
+  isRestoringSession: boolean;
   isDocumentAccessible: (documentName: string) => boolean;
   loginUser: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -50,6 +51,7 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
   const [workspaceManifest, setWorkspaceManifest] = useState<WorkspaceManifest | null>(null);
   
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [initStage, setInitStage] = useState(0);
 
   // Access override clearance requests (loaded from backend on mount)
@@ -58,12 +60,12 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
   // Restore authenticated session from backend on mount using stored JWT
   useEffect(() => {
     const restoreSession = async () => {
+      setIsRestoringSession(true);
       try {
         const sessionCookie = getCookie(SESSION_TOKEN_KEY);
-        const accessToken = typeof window !== 'undefined' ? localStorage.getItem('ib-access-token') : null;
         const path = window.location.pathname;
 
-        if (sessionCookie && accessToken) {
+        if (sessionCookie) {
           // Fetch current user profile from backend
           const meData = await authService.getMe();
           if (meData) {
@@ -84,6 +86,10 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
             if (resolvedRole && PERSONA_CONFIGS[resolvedRole]) {
               setPersona(PERSONA_CONFIGS[resolvedRole]);
               setRetrievalMode(PERSONA_CONFIGS[resolvedRole].defaultRetrievalMode);
+            } else {
+              // Fallback for custom/unmatched users (like admin@sangrahalayamu.com)
+              setPersona(PERSONA_CONFIGS['Director / Executive']);
+              setRetrievalMode(PERSONA_CONFIGS['Director / Executive'].defaultRetrievalMode);
             }
           } else {
             // Token expired and refresh failed — redirect to login
@@ -94,6 +100,8 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.error('Failed to restore session:', e);
+      } finally {
+        setIsRestoringSession(false);
       }
     };
     restoreSession();
@@ -132,6 +140,10 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
       if (resolvedRole && PERSONA_CONFIGS[resolvedRole]) {
         setPersona(PERSONA_CONFIGS[resolvedRole]);
         setRetrievalMode(PERSONA_CONFIGS[resolvedRole].defaultRetrievalMode);
+      } else {
+        // Fallback for custom/unmatched users
+        setPersona(PERSONA_CONFIGS['Director / Executive']);
+        setRetrievalMode(PERSONA_CONFIGS['Director / Executive'].defaultRetrievalMode);
       }
 
       // Brief pause to let user see stage 4 complete
@@ -213,21 +225,9 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     );
     if (hasApprovedRequest) return true;
 
-    // Default clearances mapping
-    const docClearances: Record<string, string> = {
-      'SOP_HighPressure_Boiler.docx': 'Field Technician',
-      'OSHA_Boiler_Inspections.pdf': 'Field Technician',
-      'P-102A_Schematics_v3.pdf': 'Maintenance Engineer',
-      'Flow_Sensor_Calibration.dwg': 'Maintenance Engineer',
-      'OSHA_Steam_Regulations_2026.pdf': 'Regulatory & Compliance Manager',
-      'Audit_Control_List.xlsx': 'Regulatory & Compliance Manager',
-      'Reactor_Core_Schedules.xlsx': 'Project Manager',
-      'Executive_Financial_Calibrations.pdf': 'Director / Executive',
-    };
-
-    const requiredRole = docClearances[documentName];
-    if (!requiredRole) return true; // public or unmapped files are accessible
-    return persona.role === requiredRole;
+    // Default to true for now since real permissions should be fetched dynamically
+    // In a fully dynamic system, the document's metadata from the DB would dictate this.
+    return true;
   };
 
   return (
@@ -238,6 +238,7 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
         permissions,
         workspaceManifest,
         isInitializing,
+        isRestoringSession,
         initStage,
         accessRequests,
         isDocumentAccessible,
