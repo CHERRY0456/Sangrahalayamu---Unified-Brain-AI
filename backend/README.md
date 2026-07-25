@@ -4,71 +4,64 @@ High-performance Python backend powering **IndustryBrain-AI** (Codename: *Sangra
 
 ---
 
-## 🏗️ Detailed Architecture & Component Flow
+## 🏛️ High-Level System Architecture
 
 ```mermaid
-flowchart TB
-    subgraph APILayer ["FastAPI Router (/api/v1)"]
-        AuthRouter["/auth (JWT Authentication)"]
-        UploadRouter["/upload (Ingestion Manager)"]
-        ChatRouter["/chat (SSE Chat Streaming)"]
-        AuditRouter["/audit (Compliance Audit Logs)"]
-        AccessRouter["/access (RBAC Overrides)"]
+graph TD
+    classDef frontend fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef backend fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#fff;
+    classDef rag fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#fff;
+    classDef storage fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
+    classDef bedrock fill:#451a03,stroke:#fb923c,stroke-width:2px,color:#fff;
+
+    subgraph UserInterface ["1. Client Workspace Layer"]
+        UI["React / Next.js Enterprise Web App<br/>(Chat, Ingestion Manager, Audit & Transparency)"]:::frontend
     end
 
-    subgraph IngestionPipeline ["Ingestion & Parsing Pipeline"]
-        Detector["Format Detector"]
-        DoclingP["DoclingParser (ENABLE_DOCLING Toggle)"]
-        NativeParsers["Native Parsers (PyPDF, DOCX, XLSX, DXF, EML, Log, OCR)"]
-        Chunker["Layout-Aware Chunking"]
-        EntityExtractor["Entity & Graph Relation Extractor"]
+    subgraph ApplicationLayer ["2. FastAPI Service Layer (/api/v1)"]
+        API["API Gateway & Controllers<br/>(Auth, RBAC Clearance, Middleware & SSE Streams)"]:::backend
+        Ingestion["Multi-Format Ingestion Pipeline<br/>(Dynamic Docling / Native Parsers & Chunking)"]:::backend
+        Agents["Multi-Agent Reasoning Orchestrator<br/>(Root Cause Analysis, Safety & Maintenance Agents)"]:::backend
     end
 
-    subgraph HybridRetrieval ["3-Way Hybrid RAG Engine"]
-        IntentGuard{"Intent Guard"}
-        SqlPrefilter["PostgreSQL Metadata Filter"]
-        VectorSearch["Qdrant Vector Search (1024-dim)"]
-        GraphSearch["Neo4j Cypher Traversal"]
-        PolicyGuard["PolicyEngine RBAC Filter"]
-        RankFusion["Weighted Rank Fusion"]
+    subgraph HybridRAG ["3. Hybrid RAG Engine"]
+        Retrieval["3-Way Hybrid Retrieval & Rank Fusion<br/>(Intent Guard + Metadata + Vector + Graph RAG)"]:::rag
     end
 
-    subgraph AIReasoning ["AI & Multi-Agent Framework"]
-        AgentOrch["Agent Orchestrator"]
-        PromptBuilder["Prompt Engine"]
-        Validator["Response Validator & Formatter"]
+    subgraph DataPersistence ["4. Persistence & Knowledge Base"]
+        Postgres[(PostgreSQL RDBMS<br/>Metadata, Users & Audit Logs)]:::storage
+        Qdrant[(Qdrant Vector DB<br/>1024-dim Cohere Embeddings)]:::storage
+        Neo4j[(Neo4j Graph DB<br/>Equipment Topology & Schematics)]:::storage
     end
 
-    subgraph DataStorage ["Persistence & Bedrock AI"]
-        Postgres[(PostgreSQL RDBMS)]
-        Qdrant[(Qdrant Vector DB 1024-dim)]
-        Neo4j[(Neo4j Graph DB)]
-        BedrockEmbed[AWS Bedrock Cohere Embed v3]
-        BedrockLLM[AWS Bedrock Qwen 235B LLM]
+    subgraph FoundationAI ["5. AWS Bedrock AI Layer"]
+        Cohere["AWS Bedrock Cohere Embed v3<br/>(1024-dim Vector Embeddings)"]:::bedrock
+        LLM["AWS Bedrock Qwen 235B / Llama 3<br/>(Grounded Answer Generation)"]:::bedrock
     end
 
-    UploadRouter --> Detector --> DoclingP & NativeParsers --> Chunker --> EntityExtractor
-    EntityExtractor -->|Embed 1024-dim| BedrockEmbed -->|Vectors| Qdrant
-    EntityExtractor -->|Topology| Neo4j
-    EntityExtractor -->|Metadata| Postgres
-
-    ChatRouter --> IntentGuard
-    IntentGuard -->|Greeting| PromptBuilder
-    IntentGuard -->|Technical Query| SqlPrefilter
-    SqlPrefilter --> Postgres
-    SqlPrefilter --> VectorSearch & GraphSearch
-    VectorSearch --> Qdrant
-    GraphSearch --> Neo4j
-    VectorSearch & GraphSearch --> PolicyGuard --> Postgres
-    PolicyGuard --> RankFusion --> AgentOrch --> PromptBuilder --> BedrockLLM --> Validator
+    %% Data flow connections
+    UI <-->|HTTP REST / SSE Token Stream| API
+    API -->|Document Ingestion| Ingestion
+    API -->|User Query| Retrieval
+    
+    Ingestion -->|Metadata & Provenance| Postgres
+    Ingestion -->|Generate Embeddings| Cohere -->|Store Vectors| Qdrant
+    Ingestion -->|Extract Equipment Relations| Neo4j
+    
+    Retrieval -->|1. SQL Pre-Filter| Postgres
+    Retrieval -->|2. Vector Search| Qdrant
+    Retrieval -->|3. Cypher Traversal| Neo4j
+    
+    Retrieval -->|4. Context Fusion| Agents
+    Agents <-->|Prompt & Response Stream| LLM
 ```
 
 ---
 
-## ⚡ Technical Highlights
+## ⚡ Key Implementation Highlights
 
 ### 1. Low-Memory 8GB RAM Strategy (`ENABLE_DOCLING`)
-- IBM Docling relies on heavy PyTorch deep learning models (16GB+ RAM requirement).
+- Heavy layout models (IBM Docling) require 16GB+ RAM and can cause PyTorch `std::bad_alloc` crashes on 8GB laptops.
 - Controlled via `ENABLE_DOCLING` in `backend/.env`:
   - **`ENABLE_DOCLING=False` (Default for 8GB RAM)**: Bypasses PyTorch models. Uses lightweight native parsers (`PyMuPDF`, `pdfplumber`, `python-docx`, `openpyxl`, `ezdxf`, `extract-msg`) running in **`< 50MB RAM`** and completing in **`< 2s`**.
   - **`ENABLE_DOCLING=True` (For High-Memory GPU/Servers)**: Enables IBM Docling visual layout models.

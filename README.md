@@ -4,138 +4,77 @@
 
 ---
 
-## 🏗️ Detailed System Architecture
+## 🏛️ High-Level System Architecture
 
 ```mermaid
-flowchart TB
-    subgraph ClientLayer ["1. Presentation Layer (Next.js 14 App Router)"]
-        UI["React Workspace UI<br/>(/chat, /upload, /audit, /dashboard)"]
-        SSEClient["SSE Stream Reader"]
-        TransparencyUI["Transparency & Explainability Panel<br/>(Citations, Reasoning Graph, Confidence Metrics)"]
-        APIClient["API Client (Bearer JWT Token Injector)"]
+graph TD
+    classDef frontend fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef backend fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#fff;
+    classDef rag fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#fff;
+    classDef storage fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
+    classDef bedrock fill:#451a03,stroke:#fb923c,stroke-width:2px,color:#fff;
+
+    subgraph UserInterface ["1. Client Workspace Layer"]
+        UI["React / Next.js Enterprise Web App<br/>(Chat, Ingestion Manager, Audit & Transparency)"]:::frontend
     end
 
-    subgraph APILayer ["2. API & Security Layer (FastAPI /api/v1)"]
-        Middleware["Middleware Stack<br/>(CORS, Correlation ID, Response Timing)"]
-        AuthRouter["/api/v1/auth<br/>(JWT Login, Refresh, Session)"]
-        UploadRouter["/api/v1/upload<br/>(Ingestion Manager)"]
-        ChatRouter["/api/v1/chat<br/>(SSE Streaming & Q&A)"]
-        AuditRouter["/api/v1/audit<br/>(Compliance Activity Logs)"]
-        AccessRouter["/api/v1/access<br/>(RBAC Clearance Overrides)"]
+    subgraph ApplicationLayer ["2. FastAPI Service Layer (/api/v1)"]
+        API["API Gateway & Controllers<br/>(Auth, RBAC Clearance, Middleware & SSE Streams)"]:::backend
+        Ingestion["Multi-Format Ingestion Pipeline<br/>(Dynamic Docling / Native Parsers & Chunking)"]:::backend
+        Agents["Multi-Agent Reasoning Orchestrator<br/>(Root Cause Analysis, Safety & Maintenance Agents)"]:::backend
     end
 
-    subgraph IngestionPipeline ["3. Multi-Format Ingestion Pipeline"]
-        Detector["Format & Magic Byte Detector"]
-        
-        subgraph Parsers ["Modality-Aware Parsers Suite"]
-            DoclingP["DoclingParser<br/>(Toggle: ENABLE_DOCLING)"]
-            PdfP["PyPDF / PyMuPDF Parser"]
-            OfficeP["Office Parser (DOCX, PPTX)"]
-            SheetP["Spreadsheet Parser (XLSX, CSV)"]
-            CadP["AutoCAD DXF Parser (ezdxf)"]
-            EmailP["Email Archive Parser (EML, MSG)"]
-            LogP["Log & Runbook Parser"]
-            OcrP["OCR Router (Tesseract)"]
-        end
-        
-        Chunking["Layout-Aware Chunking Stage"]
-        EntityStage["Entity & Relation Extraction Stage"]
-        VectorIndexer["Cohere Vector Indexer (1024-dim)"]
+    subgraph HybridRAG ["3. Hybrid RAG Engine"]
+        Retrieval["3-Way Hybrid Retrieval & Rank Fusion<br/>(Intent Guard + Metadata + Vector + Graph RAG)"]:::rag
     end
 
-    subgraph RetrievalEngine ["4. 3-Way Hybrid RAG Engine (Retrieval Orchestrator)"]
-        IntentRouter{"Intent Routing Guard<br/>(Casual Greeting?)"}
-        SqlFilter["Step 1: PostgreSQL Candidate Metadata Pre-Filtering"]
-        VectorSearch["Step 2: Qdrant Semantic Vector Search"]
-        GraphSearch["Step 3: Neo4j Cypher Graph Traversal"]
-        RbacGuard["Step 4: Policy Engine Security Clearance Guard"]
-        RankFusion["Step 5: Weighted Rank Fusion<br/>(0.60 Semantic / 0.25 Graph / 0.15 Metadata)"]
+    subgraph DataPersistence ["4. Persistence & Knowledge Base"]
+        Postgres[(PostgreSQL RDBMS<br/>Metadata, Users & Audit Logs)]:::storage
+        Qdrant[(Qdrant Vector DB<br/>1024-dim Cohere Embeddings)]:::storage
+        Neo4j[(Neo4j Graph DB<br/>Equipment Topology & Schematics)]:::storage
     end
 
-    subgraph AgentOrchestration ["5. AI Reasoning & Multi-Agent Framework"]
-        AgentOrch["Agent Orchestrator"]
-        RcaAgent["Root Cause Analysis (RCA) Agent"]
-        SafetyAgent["Compliance & Safety Agent"]
-        MaintenanceAgent["Proactive Maintenance Agent"]
-        PromptEng["Prompt Engine (PromptBuilder)"]
-        Validator["Response Validator & Formatter"]
+    subgraph FoundationAI ["5. AWS Bedrock AI Layer"]
+        Cohere["AWS Bedrock Cohere Embed v3<br/>(1024-dim Vector Embeddings)"]:::bedrock
+        LLM["AWS Bedrock Qwen 235B / Llama 3<br/>(Grounded Answer Generation)"]:::bedrock
     end
 
-    subgraph PersistenceLayer ["6. Persistence & Foundation Models"]
-        PostgresDB[(PostgreSQL RDBMS<br/>Users, Document Meta, Audit Logs)]
-        QdrantDB[(Qdrant Cloud Vector DB<br/>1024-dim Collection: Enterprise_Brain)]
-        Neo4jDB[(Neo4j Cloud Graph DB<br/>Equipment Topology & Relations)]
-        BedrockEmbed["AWS Bedrock Cohere Embed v3<br/>(cohere.embed-multilingual-v3)"]
-        BedrockLLM["AWS Bedrock Qwen 235B LLM<br/>(qwen.qwen3-vl-235b-a22b)"]
-    end
-
-    %% Client to API
-    UI --> APIClient
-    APIClient --> Middleware
-    Middleware --> AuthRouter & UploadRouter & ChatRouter & AuditRouter & AccessRouter
-
-    %% Upload Flow
-    UploadRouter --> Detector
-    Detector --> Parsers
-    Parsers --> Chunking --> EntityStage --> VectorIndexer
-    VectorIndexer -->|Store Chunks & Embeddings| QdrantDB
-    EntityStage -->|Store Equipment Nodes| Neo4jDB
-    VectorIndexer -->|Store Document Records| PostgresDB
-    VectorIndexer -->|Generate 1024-dim Vectors| BedrockEmbed
-
-    %% Chat Flow
-    ChatRouter --> IntentRouter
-    IntentRouter -->|Casual Greeting| PromptEng
-    IntentRouter -->|Technical Domain Query| SqlFilter
+    %% Data flow connections
+    UI <-->|HTTP REST / SSE Token Stream| API
+    API -->|Document Ingestion| Ingestion
+    API -->|User Query| Retrieval
     
-    SqlFilter -->|Query Candidates| PostgresDB
-    SqlFilter --> VectorSearch & GraphSearch
-    VectorSearch -->|1024-dim Search| QdrantDB
-    GraphSearch -->|Cypher Traversal| Neo4jDB
+    Ingestion -->|Metadata & Provenance| Postgres
+    Ingestion -->|Generate Embeddings| Cohere -->|Store Vectors| Qdrant
+    Ingestion -->|Extract Equipment Relations| Neo4j
     
-    VectorSearch & GraphSearch --> RbacGuard
-    RbacGuard -->|Check Clearance| PostgresDB
-    RbacGuard --> RankFusion --> AgentOrch
+    Retrieval -->|1. SQL Pre-Filter| Postgres
+    Retrieval -->|2. Vector Search| Qdrant
+    Retrieval -->|3. Cypher Traversal| Neo4j
     
-    AgentOrch --> RcaAgent & SafetyAgent & MaintenanceAgent
-    AgentOrch --> PromptEng
-    PromptEng --> BedrockLLM
-    BedrockLLM --> Validator
-    Validator -->|Yield SSE Event Stream| ChatRouter
-    ChatRouter -->|Stream Tokens & Metadata| SSEClient
-    SSEClient --> UI & TransparencyUI
+    Retrieval -->|4. Context Fusion| Agents
+    Agents <-->|Prompt & Response Stream| LLM
 ```
 
 ---
 
-## 🌟 Core Architecture Modules
+## 🌟 Core System Pillars
 
-### 1. Presentation Layer (Next.js 14 App Router)
-- **Interactive Workspaces**: AI Chat (`/chat`), Ingestion Manager (`/upload`), Compliance Audit (`/audit`), and Metric Dashboards (`/`).
-- **Transparency & Explainability**: Real-time rendering of reasoning steps, document citations, overall confidence metrics, and interactive Neo4j node relationship graphs.
-- **Bearer JWT Injection**: Standardized client fetching automatically attaching authentication headers.
+### 1. 3-Way Hybrid RAG Engine
+- **Vector Similarity (Qdrant Cloud)**: Driven exclusively by AWS Bedrock **Cohere Embed v3** (`cohere.embed-multilingual-v3`) configured for **1024-dimension** vectors.
+- **Knowledge Graph (Neo4j Cloud)**: Maps plant equipment topology (e.g. `P&ID 402` $\rightarrow$ `Valve V-102` $\rightarrow$ `Pump P-1`).
+- **PostgreSQL Pre-Filtering**: Applies role-based security clearances (CEO, Engineer, Technician) and metadata constraints before vector/graph rank fusion.
 
-### 2. Decoupled API Layer (FastAPI `/api/v1`)
-- **Middleware Chain**: Outermost CORS resolution, correlation ID context tracking, and response execution timing headers.
-- **API Endpoints**: `/api/v1/auth`, `/api/v1/upload`, `/api/v1/chat`, `/api/v1/audit`, `/api/v1/access`, `/api/v1/dashboard`.
+### 2. Multi-Format Industrial Ingestion
+- Native support for `.pdf` (manuals/P&IDs), `.docx`, `.xlsx`/`.csv` (spreadsheets), `.pptx`, `.dxf` (AutoCAD schematics), `.msg`/`.eml` (email archives), `.log` (system traces), and scanned images (Tesseract OCR).
 
-### 3. Multi-Format Industrial Ingestion Pipeline
-- **Modality-Aware Inspection**: Auto-detects MIME types and magic byte headers for `.pdf`, `.docx`, `.xlsx`, `.csv`, `.pptx`, `.dxf` (AutoCAD drawings), `.msg`/`.eml`, `.log`, and images.
-- **⚡ Low-Memory 8GB RAM Strategy (`ENABLE_DOCLING`)**:
-  - `ENABLE_DOCLING=False` *(Default for 8GB RAM)*: Bypasses heavy PyTorch models. Activates high-speed native parsers (`PyMuPDF`, `pdfplumber`, `python-docx`, `openpyxl`, `ezdxf`) running in **`< 50MB RAM`** and completing in **`< 2s`**.
-  - `ENABLE_DOCLING=True` *(For High-Memory GPU/Servers)*: Enables IBM Docling visual layout models.
+### 3. ⚡ Low-Memory 8GB RAM Optimization (`ENABLE_DOCLING`)
+- **`ENABLE_DOCLING=False` (Default for 8GB RAM)**: Bypasses heavy PyTorch models. Activates high-speed native parsers (`PyMuPDF`, `pdfplumber`, `python-docx`, `openpyxl`, `ezdxf`) running in **`< 50MB RAM`** and **`< 2s`** with 0 memory crashes.
+- **`ENABLE_DOCLING=True` (For High-Memory Servers)**: Enables IBM Docling visual layout models.
 
-### 4. 3-Way Hybrid RAG Retrieval Engine
-- **Intent Routing Guard**: Bypasses vector DB search for general greetings (`"hi"`, `"hello"`).
-- **PostgreSQL Candidate Pre-filtering**: Filters document candidate IDs using metadata tags.
-- **Qdrant Vector Similarity**: Executes semantic vector search using **1024-dimension Cohere Embed v3** vectors.
-- **Neo4j Graph Traversal**: Queries equipment topological node relationships (e.g. `P&ID 402` $\rightarrow$ `Valve V-102` $\rightarrow$ `Pump P-1`).
-- **PolicyEngine RBAC Guard**: Filters candidates against user security clearance roles (CEO, Engineer, Technician).
-- **Weighted Rank Fusion**: Merges scores using normalized weights (0.60 Semantic / 0.25 Graph / 0.15 Metadata).
-
-### 5. Multi-Agent Reasoning & Foundation Layer
-- **Autonomous Agents**: Root Cause Analysis (RCA), Compliance Verification, and Maintenance Recommendation agents.
-- **AWS Bedrock Integration**: Cohere Embed v3 (`cohere.embed-multilingual-v3`) + Qwen 235B LLM (`qwen.qwen3-vl-235b-a22b`).
+### 4. Dynamic Intent Routing & Transparency
+- Bypasses vector DB searches for general greetings (`"hi"`, `"hello"`).
+- Injects full document citations, confidence metrics, reasoning steps, and interactive node graphs for technical queries.
 
 ---
 
