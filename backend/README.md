@@ -1,73 +1,71 @@
-# IndustryBrain-AI: Enterprise Python Backend
+# IndustryBrain-AI: Enterprise FastAPI Backend
 
-This is the backend API and AI reasoning engine for IndustryBrain-AI. It is built with FastAPI, PostgreSQL, Neo4j, Qdrant, and AWS Bedrock (Qwen).
-
----
-
-## 🛠️ Architecture and Services
-
-The backend follows a service-oriented architecture with clean separation between controllers (routers) and business/AI logic (services).
-
-### Key Modules:
-- **`app/api/`**: Decoupled HTTP and SSE endpoints (no business logic in routers).
-- **`app/core/`**: Centralized configuration management using Pydantic Settings (`settings.database.url`, `settings.aws.region`, etc.).
-- **`app/services/`**:
-  - **`processing/`**: Layout-aware parsing, OCR pipeline, chunking, and relationship generation.
-  - **`retrieval/`**: Hybrid retrieval engine integrating vector similarity (Qdrant) and graph database queries (Neo4j) with weighted rank fusion.
-  - **`llm/`**: AWS Bedrock providers and streaming client wrapper.
-  - **`orchestrator/`**: Main orchestrator managing Specialized Agents (RCA, Safety, Recommendation) and assembling explainable context blocks.
-  - **`graph/`**: Async Neo4j graph constructor and query engine.
-  - **`audit/` & `transparency/`**: Diagnostic logging, provenance checks, and trace explanations.
+High-performance Python backend powering **IndustryBrain-AI** (Codename: *Sangrahalayamu*). Built with **FastAPI**, **PostgreSQL**, **Neo4j Knowledge Graph**, **Qdrant Vector DB**, and **AWS Bedrock** (Cohere Embed v3 + Qwen 235B LLM).
 
 ---
 
-## 🚀 Setup & Execution
+## 🏗️ Architecture & Component Overview
 
-### 1. Install Dependencies
-Create a virtual environment and install packages:
-```bash
-python -m venv venv
-
-# On Windows
-venv\Scripts\activate
-
-# On Unix/Mac
-source venv/bin/activate
-
-pip install -r requirements.txt
+```
+backend/
+├── app/
+│   ├── api/                  # Decoupled FastAPI REST & SSE routers (/api/v1/*)
+│   │   ├── auth.py           # JWT Authentication & session management
+│   │   ├── access.py         # Temporary RBAC clearance overrides
+│   │   ├── audit.py          # Compliance & security event logs
+│   │   ├── dashboard.py      # Summary metrics & repository stats
+│   │   └── routers/          # Upload, chat, graph, agents, and health endpoints
+│   ├── core/                 # Centralized Pydantic Settings & environment config
+│   ├── database/             # SQLAlchemy engine & Qdrant vector client
+│   ├── models/               # SQLAlchemy ORM models (User, Document, AuditLog)
+│   └── services/             # Core business & AI reasoning services
+│       ├── processing/       # Multi-format ingestion pipeline & Docling toggle
+│       ├── retrieval/        # 3-Way Hybrid RAG Orchestrator & rank fusion
+│       ├── embeddings/       # Cohere Embed v3 provider (1024-dim, sub-batched)
+│       ├── graph/            # Neo4j graph provider & Cypher builders
+│       ├── ai/               # AI Orchestrator, SSE stream generator & prompts
+│       ├── validation/       # Response validator & transparency formatters
+│       └── conversation/     # Session history manager
+└── scripts/                  # Seed tools & stack diagnostic scripts
 ```
 
-### 2. Configure Environment Variables
-Copy the `.env.example` file and configure your Postgres, Neo4j, Qdrant, and AWS Bedrock credentials:
+---
+
+## ⚡ Key Implementation Highlights
+
+### 1. Low-Memory 8GB RAM Strategy (`ENABLE_DOCLING`)
+- Heavy layout models (IBM Docling) require 16GB+ RAM and can cause PyTorch `std::bad_alloc` crashes on 8GB laptops.
+- Controlled via `ENABLE_DOCLING` in `.env`:
+  - **`ENABLE_DOCLING=False`**: Bypasses heavy PyTorch models. Uses lightweight native parsers (`PyMuPDF`, `pdfplumber`, `python-docx`, `openpyxl`, `ezdxf`) running in **`< 50MB RAM`** and **`< 2s`**.
+  - **`ENABLE_DOCLING=True`**: Enables IBM Docling visual layout models for server deployments.
+
+### 2. Exclusive Cohere Embed v3 Integration (1024-dim)
+- Provider: `BedrockEmbeddingProvider` (`cohere.embed-multilingual-v3`).
+- Automatic sub-batching in chunks of **96 items** to strictly adhere to AWS Bedrock's 128 max item limit.
+- Qdrant Cloud collection (`Enterprise_Brain`) configured for **1024 vector dimensions** with keyword payload indices (`document_id`, `workspace_id`, `role_permissions`).
+
+### 3. Dynamic Conversational Intent Routing
+- Detects general greetings (`"hi"`, `"hello"`, `"who are you"`) and responds immediately with **0 vector DB calls**.
+- Technical questions dynamically trigger 3-way hybrid retrieval (PostgreSQL metadata pre-filtering $\rightarrow$ Qdrant vector search $\rightarrow$ Neo4j graph traversal $\rightarrow$ Weighted Rank Fusion).
+
+---
+
+## 🚀 Execution & Configuration
+
+### 1. Environment Setup
 ```bash
 cp .env.example .env
 ```
-Ensure you have values filled for:
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`
-- `QDRANT_URL`, `QDRANT_API_KEY`
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+Ensure your credentials for PostgreSQL, Qdrant Cloud, Neo4j Cloud, and AWS Bedrock are configured in `.env`.
 
-### 3. Run the Database Seeder
-Seed database roles, metadata schemas, and employee profiles:
+### 2. Run Database Seeder
 ```bash
 python scripts/seed_users.py
 ```
-*Note: This script automatically builds Postgres schemas if they do not exist.*
+*Seeds default roles and accounts (Default Password for all: `password123`).*
 
-### 4. Run the API Server
-Start the Uvicorn development server:
+### 3. Start Development Server
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
-Swagger UI will be available at [http://localhost:8000/docs](http://localhost:8000/docs).
-
----
-
-## 🧪 Integration Testing
-Verify that all dependencies and routers are resolved properly using our test client:
-```bash
-# Set Python path and run test script
-$env:PYTHONPATH="."  # Windows Powershell
-python scratch/test_api.py
-```
+Interactive OpenAPI documentation will be live at `http://localhost:8000/docs`.

@@ -111,6 +111,25 @@ class UploadService:
             f"Audit Log [Upload Success]: User '{user.email}' successfully uploaded document "
             f"ID '{doc.id}' (UUID: {doc.uuid}, Key: '{result.storage_key}', Size: {result.size} bytes)."
         )
+
+        # 7. Asynchronously trigger document processing pipeline in a background thread
+        # Immediately returns HTTP 201 (< 50ms) to prevent client-side HTTP timeouts!
+        def _async_process_document(doc_id: int):
+            from app.database.session import SessionLocal
+            from app.services.processing.pipeline import DocumentProcessingPipeline
+            bg_db = SessionLocal()
+            try:
+                logger.info(f"[UploadService] Background processing worker started for doc_id={doc_id}.")
+                DocumentProcessingPipeline.process_document(bg_db, doc_id)
+                logger.info(f"[UploadService|SUCCESS] Background processing worker completed for doc_id={doc_id}.")
+            except Exception as proc_err:
+                logger.error(f"[UploadService|ERROR] Background pipeline processing failed for doc_id={doc_id}: {proc_err}")
+            finally:
+                bg_db.close()
+
+        import threading
+        threading.Thread(target=_async_process_document, args=(doc.id,), daemon=True).start()
+
         return doc
 
     @staticmethod

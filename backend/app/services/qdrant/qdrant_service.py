@@ -118,16 +118,19 @@ class QdrantService:
         results = []
         for r in qdrant_results:
             try:
-                payload = QdrantPayload(**r.payload)
+                raw_payload = getattr(r, "payload", {}) or (r.get("payload", {}) if isinstance(r, dict) else {})
+                score = getattr(r, "score", 0.0) if hasattr(r, "score") else (r.get("score", 0.0) if isinstance(r, dict) else 0.0)
+                
+                payload = QdrantPayload(**raw_payload)
                 results.append(
                     SearchResult(
                         chunk_id=payload.chunk_id,
-                        score=r.score,
+                        score=score,
                         payload=payload
                     )
                 )
             except Exception as e:
-                logger.warning(f"Failed to parse payload for vector point {r.id}: {e}")
+                logger.warning(f"Failed to parse payload for vector point: {e}")
                 
         return results
 

@@ -190,6 +190,14 @@ class DoclingParser(BaseParser):
             return None
 
     def _should_use_docling(self, file_path: str, filename: str) -> bool:
+        from app.core.config import settings
+        if not settings.processing.enable_docling:
+            logger.info(
+                f"[DoclingParser] ENABLE_DOCLING=False in settings. "
+                f"Bypassing IBM Docling for '{filename}' and using fast native parser."
+            )
+            return False
+
         ext = os.path.splitext(filename)[1].lower()
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
 
@@ -213,18 +221,13 @@ class DoclingParser(BaseParser):
         return True
 
     def parse(self, file_path: str, filename: str) -> ParserResult:
-        logger.info(f"[DoclingParser] Attempting IBM Docling parse for '{filename}'")
+        logger.info(f"[DoclingParser] Processing '{filename}'")
         if not self._should_use_docling(file_path, filename):
             return self._fallback_parse(file_path, filename, reason="docling_guardrail")
 
         try:
-            os.environ.setdefault("OMP_NUM_THREADS", "1")
-            os.environ.setdefault("MKL_NUM_THREADS", "1")
-            os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-
-            from docling.document_converter import DocumentConverter
-            converter = DocumentConverter()
-            result = converter.convert(file_path)
+            from app.services.processing.docling_service import docling_service
+            result = docling_service.convert_document(file_path)
             doc = result.document
 
             markdown_text = doc.export_to_markdown()
@@ -273,13 +276,13 @@ class DoclingParser(BaseParser):
                 raw_markdown=markdown_text,
                 file_type="structured_document",
                 word_count=len(markdown_text.split()),
-                metadata={"parser": "DoclingParser", "engine": "IBM Docling"}
+                metadata={"parser": "DoclingParser", "engine": "IBM Docling Singleton"}
             )
 
         except Exception as docling_err:
             logger.warning(
-                f"[DoclingParser] Docling initialization failed. "
-                f"Activating PDF/Docx secondary fallbacks. Error: {docling_err}"
+                f"[DoclingParser] Docling execution bypassed/failed for '{filename}'. "
+                f"Activating native fallback parsers. Reason: {docling_err}"
             )
             return self._fallback_parse(file_path, filename, reason=str(docling_err))
 

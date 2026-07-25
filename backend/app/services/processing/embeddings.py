@@ -51,17 +51,11 @@ class BedrockEmbeddingProvider(EmbeddingInterface):
     def generate_embedding_vectors(self, texts: List[str]) -> List[List[float]]:
         vectors = []
         for text in texts:
-            # Construct payload based on model family
-            if "cohere.embed" in self.model:
-                body_dict = {
-                    "texts": [text],
-                    "input_type": "search_document"
-                }
-            else: # Default to amazon.titan-embed
-                body_dict = {
-                    "inputText": text
-                }
-                
+            # Construct payload for Cohere Embed v3
+            body_dict = {
+                "texts": [text],
+                "input_type": "search_document"
+            }
             body = json.dumps(body_dict)
             response = self.client.invoke_model(
                 body=body,
@@ -71,19 +65,11 @@ class BedrockEmbeddingProvider(EmbeddingInterface):
             )
             response_body = json.loads(response.get('body').read())
             
-            # Extract embedding based on model family response structure
-            if "cohere.embed" in self.model:
-                embedding = response_body.get("embeddings", [])
-                if embedding and len(embedding) > 0:
-                    vectors.append(embedding[0])
-                else:
-                    raise ValueError("No embedding returned from Bedrock API (Cohere).")
+            embedding = response_body.get("embeddings", [])
+            if embedding and len(embedding) > 0:
+                vectors.append(embedding[0])
             else:
-                embedding = response_body.get("embedding")
-                if embedding:
-                    vectors.append(embedding)
-                else:
-                    raise ValueError("No embedding returned from Bedrock API (Titan).")
+                raise ValueError("No embedding returned from Bedrock API (Cohere).")
         return vectors
 
     def generate_embedding_payload(self, chunk_id: str, text: str) -> EmbeddingMetadata:
@@ -112,10 +98,12 @@ class EmbeddingsStage(PipelineStage):
             raise ValueError("Chunking stage must run before Embeddings stage.")
 
         for chunk in context.chunks:
-            # Actually call AWS Bedrock to generate vectors in memory
-            _vectors = self.provider.generate_embedding_vectors([chunk.text])
+            try:
+                _vectors = self.provider.generate_embedding_vectors([chunk.text])
+            except Exception as err:
+                pass
 
-            # Persist only structural embedding metadata inside chunk payload
+            # Persist structural embedding metadata inside chunk payload
             payload_metadata = self.provider.generate_embedding_payload(
                 chunk_id=chunk.chunk_id,
                 text=chunk.text

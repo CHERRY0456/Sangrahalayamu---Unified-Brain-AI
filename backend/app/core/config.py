@@ -28,7 +28,7 @@ class ApplicationSettings(BaseSettings):
     env: EnvironmentEnum = Field(validation_alias="APP_ENV", default=EnvironmentEnum.DEVELOPMENT)
     debug: bool = Field(validation_alias="DEBUG", default=True)
     log_level: LogLevelEnum = Field(validation_alias="LOG_LEVEL", default=LogLevelEnum.INFO)
-    api_prefix: str = Field(validation_alias="API_PREFIX", default="/api")
+    api_prefix: str = Field(validation_alias="API_PREFIX", default="/api/v1")
     secret_key: str = Field(validation_alias="SECRET_KEY", default="dev_secret_key_change_in_production")
     jwt_secret_key: str = Field(validation_alias="JWT_SECRET_KEY", default="dev_jwt_secret_key_change_in_production")
     access_token_expire_minutes: int = Field(validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES", default=30)
@@ -73,6 +73,8 @@ class Neo4jSettings(BaseSettings):
     @computed_field
     @property
     def uri(self) -> str:
+        if any(self.host.startswith(prefix) for prefix in ["neo4j://", "neo4j+s://", "bolt://", "bolt+s://"]):
+            return self.host
         return f"bolt://{self.host}:{self.port}"
 
 class QdrantSettings(BaseSettings):
@@ -82,7 +84,7 @@ class QdrantSettings(BaseSettings):
     api_key: Optional[str] = Field(validation_alias="QDRANT_API_KEY", default=None)
     
     collection_name: str = Field(validation_alias="QDRANT_COLLECTION_NAME", default="industry_brain")
-    vector_size: int = Field(validation_alias="QDRANT_VECTOR_SIZE", default=1536)
+    vector_size: int = Field(validation_alias="QDRANT_VECTOR_SIZE", default=1024)
     distance: str = Field(validation_alias="QDRANT_DISTANCE", default="Cosine")
     timeout: float = Field(validation_alias="QDRANT_TIMEOUT", default=10.0)
     use_https: bool = Field(validation_alias="QDRANT_USE_HTTPS", default=False)
@@ -133,10 +135,10 @@ class LLMSettings(BaseSettings):
         return validate_top_k(v)
 
 class EmbeddingSettings(BaseSettings):
-    default_model: str = Field(validation_alias="DEFAULT_EMBEDDING_MODEL", default="amazon.titan-embed-text-v2:0")
-    fallback_model: str = Field(validation_alias="FALLBACK_EMBEDDING_MODEL", default="amazon.titan-embed-text-v1")
+    default_model: str = Field(validation_alias="DEFAULT_EMBEDDING_MODEL", default="cohere.embed-english-v3")
+    fallback_model: str = Field(validation_alias="FALLBACK_EMBEDDING_MODEL", default="cohere.embed-multilingual-v3")
     provider: EmbeddingProviderEnum = Field(validation_alias="EMBEDDING_PROVIDER", default=EmbeddingProviderEnum.BEDROCK)
-    dimension: int = Field(validation_alias="EMBEDDING_DIMENSION", default=1536)
+    dimension: int = Field(validation_alias="EMBEDDING_DIMENSION", default=1024)
 
     @field_validator("dimension")
     @classmethod
@@ -182,7 +184,7 @@ class ProcessingSettings(BaseSettings):
     allow_overwrite: bool = Field(validation_alias="ALLOW_OVERWRITE", default=False)
     enable_checksum: bool = Field(validation_alias="ENABLE_CHECKSUM", default=True)
 
-    enable_docling: bool = Field(validation_alias="ENABLE_DOCLING", default=True)
+    enable_docling: bool = Field(validation_alias="ENABLE_DOCLING", default=False)
     enable_ocr: bool = Field(validation_alias="ENABLE_OCR", default=True)
     ocr_provider: OCRProviderEnum = Field(validation_alias="OCR_PROVIDER", default=OCRProviderEnum.DOCLING)
     ocr_confidence_threshold: float = Field(validation_alias="OCR_CONFIDENCE_THRESHOLD", default=0.7)
@@ -190,6 +192,9 @@ class ProcessingSettings(BaseSettings):
     enable_layout_tree: bool = Field(validation_alias="ENABLE_LAYOUT_TREE", default=True)
     enable_entity_stage: bool = Field(validation_alias="ENABLE_ENTITY_STAGE", default=True)
     enable_relationship_stage: bool = Field(validation_alias="ENABLE_RELATIONSHIP_STAGE", default=True)
+    
+    parser_max_workers: int = Field(validation_alias="PARSER_MAX_WORKERS", default=2)
+    parser_timeout_seconds: int = Field(validation_alias="PARSER_TIMEOUT_SECONDS", default=120)
 
     @field_validator("max_upload_size")
     @classmethod
@@ -222,7 +227,6 @@ class FeatureFlagSettings(BaseSettings):
     
     enable_rag: bool = Field(validation_alias="ENABLE_RAG", default=True)
     enable_knowledge_graph: bool = Field(validation_alias="ENABLE_KNOWLEDGE_GRAPH", default=True)
-    enable_recommendations: bool = Field(validation_alias="ENABLE_RECOMMENDATIONS", default=True)
     enable_transparency: bool = Field(validation_alias="ENABLE_TRANSPARENCY", default=True)
     enable_persona_engine: bool = Field(validation_alias="ENABLE_PERSONA_ENGINE", default=False)
     enable_compliance_agent: bool = Field(validation_alias="ENABLE_COMPLIANCE_AGENT", default=False)

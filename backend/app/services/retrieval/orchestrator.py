@@ -44,7 +44,29 @@ class HybridRetrievalService:
             f"Retrieval Request: User '{user.email}' (Role: {user.role.name}) | Query: '{query}'"
         )
 
-        # 1. Candidate Pre-filtering (PostgreSQL/SQLite metadata checks)
+        # Detect casual greetings & general conversational intent to bypass vector/graph DB lookups
+        conversational_phrases = {
+            "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+            "who are you", "what can you do", "help", "thanks", "thank you", "bye", "goodbye",
+            "how are you", "what is your name"
+        }
+        clean_q = query.strip().lower().rstrip("!?.")
+        is_greeting = clean_q in conversational_phrases or (
+            len(clean_q.split()) <= 2 and not any(
+                keyword in clean_q for keyword in ["valve", "pressure", "manual", "spec", "drawing", "p&id", "report", "csv", "log", "pump", "doc", "document", "file", "error", "fail"]
+            )
+        )
+
+        if is_greeting:
+            logger.info(f"Conversational query detected ('{query}'). Bypassing vector/graph DB search.")
+            return context_builder.build_context(HybridRetrievalPackage(
+                query=query,
+                chunks=[],
+                graph_relationships=[],
+                metadata_summary={"candidate_documents_count": 0},
+                explanation="Conversational query — vector and graph retrieval bypassed."
+            ))
+
         candidate_ids = MetadataFilter.filter_candidates(db, filters)
         if not candidate_ids:
             return context_builder.build_context(HybridRetrievalPackage(

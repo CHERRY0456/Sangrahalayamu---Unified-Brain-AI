@@ -177,3 +177,23 @@ class Neo4jProvider(BaseGraphProvider):
         except Exception as e:
             logger.error(f"Neo4j health check failed: {e}")
             return False
+
+    def session(self):
+        """
+        Synchronous session context manager for graph ingestion.
+        """
+        from neo4j import GraphDatabase
+        sync_driver = GraphDatabase.driver(self.uri, auth=(self.username, self.password))
+        return sync_driver.session(database=self.database)
+
+
+Neo4jGraphProvider = Neo4jProvider
+
+_neo4j_provider_instance: Optional[Neo4jProvider] = None
+
+def get_neo4j_provider() -> Neo4jProvider:
+    global _neo4j_provider_instance
+    if _neo4j_provider_instance is None:
+        _neo4j_provider_instance = Neo4jProvider()
+    return _neo4j_provider_instance
+

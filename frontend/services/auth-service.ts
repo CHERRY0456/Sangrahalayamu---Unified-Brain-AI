@@ -28,22 +28,25 @@ export class AuthService {
    */
   public async login(email: string, password: string): Promise<LoginResponse> {
     // Step 1: Authenticate and receive HttpOnly cookies
-    const tokenRes = await fetch(`${this.baseUrl}/api/auth/login`, {
+    const tokenRes = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
       credentials: 'include',
     });
 
-    if (!tokenRes.ok) {
-      const err = await tokenRes.json().catch(() => ({ detail: 'Login failed.' }));
-      throw new Error(err.detail || `Login failed with status ${tokenRes.status}`);
+    const loginData = await tokenRes.json().catch(() => ({}));
+    if (loginData.access_token && typeof window !== 'undefined') {
+      localStorage.setItem('ib-access-token', loginData.access_token);
+      setCookie(SESSION_TOKEN_KEY, 'authenticated', 1);
     }
 
     // Step 2: Fetch full user profile + workspace manifest
-    const meRes = await fetch(`${this.baseUrl}/api/auth/me`, {
+    const accessToken = loginData.access_token || (typeof window !== 'undefined' ? localStorage.getItem('ib-access-token') : '');
+    const meRes = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
       headers: {
         'Content-Type': 'application/json',
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
       },
       credentials: 'include',
     });
@@ -67,7 +70,7 @@ export class AuthService {
    */
   public async logout(): Promise<void> {
     try {
-      await fetch(`${this.baseUrl}/api/auth/logout`, {
+      await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -76,15 +79,21 @@ export class AuthService {
       // Best-effort logout — clear local state regardless
     }
     eraseCookie(SESSION_TOKEN_KEY);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ib-access-token');
+      localStorage.removeItem('session_token');
+    }
   }
 
   /**
    * Refreshes the current user's profile from the backend (e.g., on page reload).
    */
   public async getMe(): Promise<LoginResponse | null> {
-    const meRes = await fetch(`${this.baseUrl}/api/auth/me`, {
+    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('ib-access-token') : '';
+    const meRes = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
       headers: {
         'Content-Type': 'application/json',
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
       },
       credentials: 'include',
     });

@@ -9,7 +9,7 @@ export class ApiClient {
 
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    this.defaultTimeout = 10000;
+    this.defaultTimeout = 300000; // 300 seconds (5 minutes) for enterprise file uploads & parsing
   }
 
   /**
@@ -25,6 +25,13 @@ export class ApiClient {
     const headers: Record<string, string> = {
       ...(options.headers as Record<string, string> || {}),
     };
+
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('ib-access-token') || localStorage.getItem('session_token');
+      if (token && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
 
     // Auto-set JSON content type only if body is not FormData
     if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
@@ -87,7 +94,7 @@ export class ApiClient {
   private async handleTokenRefresh(): Promise<boolean> {
     this.isRefreshing = true;
     try {
-      const res = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+      const res = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

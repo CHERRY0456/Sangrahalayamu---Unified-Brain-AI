@@ -83,7 +83,7 @@ export default function ChatPage() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const accessToken = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/chat/conversations`, { credentials: 'include',
+        const res = await fetch(`${baseUrl}/api/v1/chat/conversations`, { credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
@@ -143,7 +143,7 @@ export default function ChatPage() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const accessToken = localStorage.getItem('ib-access-token');
-        const res = await fetch(`${baseUrl}/api/chat/conversations/${activeId}/messages`, { credentials: 'include',
+        const res = await fetch(`${baseUrl}/api/v1/chat/conversations/${activeId}/messages`, { credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
@@ -225,7 +225,7 @@ export default function ChatPage() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const accessToken = localStorage.getItem('ib-access-token');
-      await fetch(`${baseUrl}/api/chat/conversations/${id}`, { credentials: 'include',
+      await fetch(`${baseUrl}/api/v1/chat/conversations/${id}`, { credentials: 'include',
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -270,7 +270,7 @@ export default function ChatPage() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const accessToken = typeof window !== 'undefined' ? localStorage.getItem('ib-access-token') : null;
-      const response = await fetch(`${baseUrl}/api/chat`, { credentials: 'include',
+      const response = await fetch(`${baseUrl}/api/v1/chat`, { credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -406,7 +406,7 @@ export default function ChatPage() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const accessToken = localStorage.getItem('ib-access-token');
-      const res = await fetch(`${baseUrl}/api/chat/explain/${msgId}`, { credentials: 'include',
+      const res = await fetch(`${baseUrl}/api/v1/chat/explain/${msgId}`, { credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),

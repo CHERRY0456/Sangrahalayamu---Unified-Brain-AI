@@ -1,4 +1,6 @@
-from .pipeline import DocumentProcessingPipeline
+from .detector import format_detector
+from .indexer import industrial_indexer, IndustrialIndexer
+from .pipeline import DocumentProcessingPipeline, ingestion_pipeline
 from .stage import PipelineContext, PipelineStage
 from .parser import DoclingParser, ParserStage
 from .metadata import ProcessingMetadataGenerator, MetadataStage
@@ -24,6 +26,10 @@ from .models import (
 
 __all__ = [
     "DocumentProcessingPipeline",
+    "ingestion_pipeline",
+    "format_detector",
+    "industrial_indexer",
+    "IndustrialIndexer",
     "PipelineContext",
     "PipelineStage",
     "DoclingParser",

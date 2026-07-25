@@ -23,7 +23,7 @@ export class UploadService {
       formData.append('metadata', JSON.stringify({ category, description }));
 
       try {
-        const document = await api.post<UploadedDocument>('/api/upload', formData);
+        const document = await api.post<UploadedDocument>('/api/v1/upload', formData, {}, 300000);
         
         if (document.status === 'FAILED') {
           console.error(`Document processing failed for ${file.name}`);
@@ -40,7 +40,7 @@ export class UploadService {
 
   public async listDocuments(): Promise<UploadedDocument[]> {
     try {
-      const data = await api.get<{ documents: UploadedDocument[] }>('/api/upload');
+      const data = await api.get<{ documents: UploadedDocument[] }>('/api/v1/upload');
       return data.documents || [];
     } catch (error) {
       console.error('Failed to list documents:', error);

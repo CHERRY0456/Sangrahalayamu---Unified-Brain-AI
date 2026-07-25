@@ -19,26 +19,7 @@ interface RequestAccessModalProps {
   matchingRestrictedDocs?: RestrictedDoc[];
 }
 
-const DEFAULT_RESTRICTED_RESOURCES: RestrictedDoc[] = [
-  {
-    name: 'P-102A_Schematics_v3.pdf',
-    category: 'P&ID Blueprint',
-    relevanceScore: 92,
-    sectionsAvailable: ['Complete Document', 'Section 4.1: Flow Diagrams', 'Section 5.2: Electrical Calibrations'],
-  },
-  {
-    name: 'OSHA_Steam_Regulations_2026.pdf',
-    category: 'Compliance',
-    relevanceScore: 88,
-    sectionsAvailable: ['Complete Document', 'Section 2.1: Steam Ventilation', 'Section 3.4: Pressure Release SOPs'],
-  },
-  {
-    name: 'Maintenance_Log_2026_07.xlsx',
-    category: 'Energy Reports',
-    relevanceScore: 84,
-    sectionsAvailable: ['Complete Document', 'Section 1.2: General Specifications', 'Section 2.3: Cylinder Limits'],
-  },
-];
+const DEFAULT_RESTRICTED_RESOURCES: RestrictedDoc[] = [];
 
 export default function RequestAccessModal({
   isOpen,

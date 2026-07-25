@@ -68,7 +68,6 @@ class _ServiceRegistry:
         self.retrieval_orchestrator      = None
         self.ai_orchestrator             = None
         self.transparency_engine         = None
-        self.recommendation_orchestrator = None
         self.audit_service               = None
         self.notification_service        = None
 
@@ -97,7 +96,6 @@ class _ServiceRegistry:
         self._register_retrieval()
         self._register_ai_orchestrator()
         self._register_transparency()
-        self._register_recommendations()
         self._register_audit()
         self._register_notifications()
         self._probe_configuration()
@@ -225,18 +223,6 @@ class _ServiceRegistry:
             self._ok("Transparency Engine", status)
         except Exception as exc:
             self._fail("Transparency Engine", str(exc))
-
-    def _register_recommendations(self) -> None:
-        try:
-            from app.services.recommendations.orchestrator import RecommendationService
-            from app.core.config import settings
-            self.recommendation_orchestrator = RecommendationService()
-            if settings.flags.enable_recommendations:
-                self._ok("Recommendation Engine", f"Max results: {5}")
-            else:
-                self._disabled("Recommendation Engine", "ENABLE_RECOMMENDATIONS=False")
-        except Exception as exc:
-            self._fail("Recommendation Engine", str(exc))
 
     def _register_audit(self) -> None:
         try:

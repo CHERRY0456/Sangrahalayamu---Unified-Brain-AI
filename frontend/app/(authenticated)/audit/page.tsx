@@ -13,10 +13,10 @@ export default function AuditPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const eventsData = await api.get<AuditEvent[]>('/api/audit/events?limit=100');
+        const eventsData = await api.get<AuditEvent[]>('/api/v1/audit/events?limit=100');
         setEvents(eventsData);
         
-        const statsData = await api.get<any>('/api/audit/summary');
+        const statsData = await api.get<any>('/api/v1/audit/summary');
         setSummaryStats(statsData);
       } catch (err) {
         console.error('Failed to fetch audit data:', err);

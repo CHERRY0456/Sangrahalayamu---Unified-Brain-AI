@@ -1,0 +1,49 @@
+# Byte-compiled / Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+
+# Virtual Environments
+venv/
+env/
+.venv/
+ENV/
+
+# Environment and Secret Files
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Node / Next.js / Frontend
+node_modules/
+.next/
+out/
+build/
+dist/
+.vercel/
+*.tsbuildinfo
+
+# Uploads, Local Caches, Databases & Storage
+backend/storage/
+backend/uploads/
+backend/scratch/
+backend/.cache/
+*.db
+*.sqlite3
+sangrahalayamu.db
+
+# Logs
+*.log
+logs/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+__pyrefly_virtual__/

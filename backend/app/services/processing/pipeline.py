@@ -170,6 +170,45 @@ class DocumentProcessingPipeline:
                 profile=profile
             )
 
+            # 11.5. Index generated chunks and embeddings into Qdrant Cloud Collection
+            try:
+                from app.services.embeddings.embedding_service import embedding_service
+                from app.services.qdrant.qdrant_service import qdrant_service
+                from app.core.config import settings
+
+                logger.info(f"[IngestionEngine] Generating embeddings for {len(embedding_docs)} chunks...")
+                chunk_texts = [edoc.text for edoc in embedding_docs]
+                
+                # Generate embedding vectors (uses Cohere or local fallback)
+                embeddings = embedding_service.embed_batch(chunk_texts)
+                
+                # Format payload lists for Qdrant service mapping (List[str] for entities and relationships)
+                chunks_payload = []
+                for edoc in embedding_docs:
+                    chunks_payload.append({
+                        "chunk_id": edoc.chunk_id,
+                        "text": edoc.text,
+                        "metadata": edoc.metadata,
+                        "provenance": edoc.provenance.model_dump(mode="json") if edoc.provenance else {},
+                        "entities": [ent.name for ent in edoc.entities],
+                        "relationships": [f"{rel.source} -{rel.predicate}-> {rel.target}" for rel in edoc.relationships]
+                    })
+                
+                # Ensure Qdrant collection is created/exists before upserting
+                qdrant_service.initialize()
+                
+                logger.info(f"[IngestionEngine] Indexing {len(chunks_payload)} chunks into Qdrant collection '{settings.qdrant.collection_name}'...")
+                qdrant_service.upsert_document_chunks(
+                    document_id=str(doc.id),
+                    workspace_id="default",
+                    role_permissions=["CEO", "Manager", "Employee"],
+                    chunks=chunks_payload,
+                    embeddings=embeddings
+                )
+                logger.info(f"[IngestionEngine|SUCCESS] Document chunks and vectors indexed successfully in Qdrant.")
+            except Exception as qd_idx_err:
+                logger.error(f"[IngestionEngine|ERROR] Failed to index document vectors in Qdrant: {qd_idx_err}")
+
             # 12. Save payload properties to database JSON column
             meta = dict(doc.doc_metadata or {})
             meta["processed_payload"] = processed_payload.model_dump(mode="json")
@@ -267,3 +306,79 @@ class DocumentProcessingPipeline:
                     os.remove(temp_file_path)
                 except Exception as clean_err:
                     logger.warning(f"Could not remove temp processing file {temp_file_path}: {str(clean_err)}")
+
+    @staticmethod
+    def process_batch(document_ids: List[int]) -> List[ProcessedDocumentPayload]:
+        """
+        Executes parallel document ingestion for batch uploads using a bounded ThreadPoolExecutor
+        configured via settings.processing.parser_max_workers (default: 2).
+        """
+        import concurrent.futures
+        from app.database.session import SessionLocal
+        from app.core.config import settings
+
+        workers = settings.processing.parser_max_workers
+        logger.info(f"[BatchIngestionEngine] Processing {len(document_ids)} documents using {workers} parallel workers.")
+
+        def _worker_task(doc_id: int):
+            db = SessionLocal()
+            try:
+                return DocumentProcessingPipeline.process_document(db, doc_id)
+            finally:
+                db.close()
+
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_id = {executor.submit(_worker_task, doc_id): doc_id for doc_id in document_ids}
+            for future in concurrent.futures.as_completed(future_to_id):
+                doc_id = future_to_id[future]
+                try:
+                    payload = future.result()
+                    results.append(payload)
+                except Exception as exc:
+                    logger.error(f"[BatchIngestionEngine|ERROR] Document ID {doc_id} failed in parallel worker: {exc}")
+
+        return results
+
+    async def run(self, file_bytes: bytes, filename: str, user_id: str = "default_user", workspace_id: str = "default") -> dict:
+        """
+        Universal Industrial Ingestion Pipeline entry point.
+        Detector -> Format Parser -> PostgreSQL + Qdrant Vector + Neo4j Graph + AWS Bedrock Indexer.
+        """
+        from .detector import format_detector
+        from .indexer import industrial_indexer
+        from app.database.session import SessionLocal
+
+        # Save temporary file for parser access
+        backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        temp_dir = os.path.join(backend_root, "storage", "tmp")
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_file_path = os.path.join(temp_dir, f"upload_{uuid.uuid4().hex[:8]}_{filename}")
+        with open(temp_file_path, "wb") as f:
+            f.write(file_bytes)
+
+        try:
+            # 1. Resolve parser via format detector
+            parser = format_detector.get_parser(filename)
+            
+            # 2. Parse file
+            parsed_doc = parser.parse(temp_file_path, filename)
+            
+            # 3. Index across PostgreSQL, Qdrant, and Neo4j
+            db = SessionLocal()
+            try:
+                result = industrial_indexer.index(db, parsed_doc, user_id=user_id, workspace_id=workspace_id)
+                return result
+            finally:
+                db.close()
+        finally:
+            if os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                except Exception:
+                    pass
+
+
+ingestion_pipeline = DocumentProcessingPipeline()
+

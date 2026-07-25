@@ -1,17 +1,49 @@
-import React from 'react';
-import { FileText, MessageSquare, Cpu, Key } from 'lucide-react';
+'use client';
 
-const STATS = [
-  { label: 'Documents Ingested', value: '1,429', icon: FileText, change: '+14 this week' },
-  { label: 'AI Conversations', value: '84', icon: MessageSquare, change: '12 active today' },
-  { label: 'Active Parser Tasks', value: '3', icon: Cpu, change: 'Running OCR...' },
-  { label: 'Pending Access Keys', value: '2', icon: Key, change: 'Approval required' },
-];
+import React, { useState, useEffect } from 'react';
+import { FileText, MessageSquare, Cpu, ShieldCheck } from 'lucide-react';
+import { api } from '@/lib/api-client';
 
 export default function SummaryCards() {
+  const [stats, setStats] = useState({
+    documents: 0,
+    conversations: 0,
+    activeTasks: 0,
+    audits: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const data = await api.get<any>('/api/v1/dashboard/summary');
+        if (data && data.data) {
+          setStats({
+            documents: data.data.total_documents || 0,
+            conversations: data.data.total_conversations || 0,
+            activeTasks: data.data.active_parser_tasks || 0,
+            audits: data.data.total_audit_events || 0,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard summary stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, []);
+
+  const items = [
+    { label: 'Documents Ingested', value: loading ? '...' : stats.documents, icon: FileText, change: 'Ingested into Vector/Graph' },
+    { label: 'AI Conversations', value: loading ? '...' : stats.conversations, icon: MessageSquare, change: 'Total Q&A sessions' },
+    { label: 'Active Parser Tasks', value: loading ? '...' : stats.activeTasks, icon: Cpu, change: 'Docling OCR queue' },
+    { label: 'Audit Records', value: loading ? '...' : stats.audits, icon: ShieldCheck, change: 'Logged system events' },
+  ];
+
   return (
     <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 w-full">
-      {STATS.map((stat, i) => {
+      {items.map((stat, i) => {
         const Icon = stat.icon;
         return (
           <div

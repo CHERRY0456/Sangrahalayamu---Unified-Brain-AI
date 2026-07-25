@@ -37,14 +37,19 @@ class BedrockProvider(LLMProvider):
     """
     def __init__(self):
         self.client = None
-        self.model_id = "anthropic.claude-3-haiku-20240307-v1:0"
+        from app.core.config import settings
+        self.model_id = settings.llm.default_model or "anthropic.claude-3-haiku-20240307-v1:0"
         try:
             import boto3
-            # Attempt loading Bedrock runtime client
-            self.client = boto3.client("bedrock-runtime", region_name="us-east-1")
+            kwargs = {"region_name": settings.aws.region or "us-east-1"}
+            if settings.aws.access_key_id and settings.aws.secret_access_key:
+                kwargs["aws_access_key_id"] = settings.aws.access_key_id
+                kwargs["aws_secret_access_key"] = settings.aws.secret_access_key
+
+            self.client = boto3.client("bedrock-runtime", **kwargs)
         except Exception as e:
             logger.error(f"AWS boto3 client failed to load: {e}")
-            raise RuntimeError("Live Bedrock connection is required in production. No mock fallbacks allowed.") from e
+            raise RuntimeError("Live Bedrock connection is required in production.") from e
 
     def generate(self, req: LLMRequest) -> LLMResponse:
         if not self.client:

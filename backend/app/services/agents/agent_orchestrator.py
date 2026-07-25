@@ -7,7 +7,6 @@ from .agent_registry import agent_registry
 from .rca_agent import RCAAgent
 from .compliance_agent import ComplianceAgent
 from .failure_agent import FailureIntelligenceAgent
-from .recommendation_agent import RecommendationAgent
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 agent_registry.register(RCAAgent())
 agent_registry.register(ComplianceAgent())
 agent_registry.register(FailureIntelligenceAgent())
-agent_registry.register(RecommendationAgent())
 
 class AgentOrchestrator:
     """
@@ -40,9 +38,6 @@ class AgentOrchestrator:
             
         if "similar failure" in query_lower or "pattern" in query_lower:
             agents_to_run.append("FailureIntelligenceAgent")
-            
-        if "recommend" in query_lower or "best practice" in query_lower:
-            agents_to_run.append("RecommendationAgent")
             
         return list(set(agents_to_run))
 

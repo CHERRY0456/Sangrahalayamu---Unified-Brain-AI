@@ -7,7 +7,7 @@ export class ChatService {
    */
   public async submitAccessRequest(resourceId: string, reason: string): Promise<boolean> {
     try {
-      const response = await apiClient.post<{ success: boolean }>('/api/access/request', {
+      const response = await apiClient.post<{ success: boolean }>('/api/v1/access/request', {
         document_id: parseInt(resourceId, 10),
         requested_sections: [],
         justification: reason,
@@ -24,7 +24,7 @@ export class ChatService {
    */
   public async getTraceExplanation(messageId: string): Promise<ExplanationData | null> {
     try {
-      return await apiClient.get<ExplanationData>(`/api/chat/explain/${messageId}`);
+      return await apiClient.get<ExplanationData>(`/api/v1/chat/explain/${messageId}`);
     } catch (e) {
       return null;
     }

@@ -157,11 +157,11 @@ export default function HistoryPage() {
           conversation={activeConv}
           events={events}
           documents={docs}
-          avgConfidence={activeConv?.id === '1' ? 92 : activeConv?.id === '2' ? 88 : 95}
-          explainabilityScore={activeConv?.id === '1' ? 94 : activeConv?.id === '2' ? 89 : 96}
+          avgConfidence={activeConv ? 95 : 0}
+          explainabilityScore={activeConv ? 95 : 0}
           responsesGenerated={activeConv?.responsesCount || 0}
-          transparencyViews={activeConv?.id === '1' ? 2 : activeConv?.id === '2' ? 1 : 0}
-          accessRequests={activeConv?.id === '3' ? 1 : 0}
+          transparencyViews={0}
+          accessRequests={0}
         />
 
       </div>

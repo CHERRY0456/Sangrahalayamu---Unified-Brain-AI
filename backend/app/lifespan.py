@@ -89,6 +89,14 @@ async def lifespan(app: FastAPI):
     # 3. Service registry — also emits the startup diagnostics report
     ServiceRegistry.initialize()
 
+    # 4. Ensure Qdrant collection is validated/created on startup
+    try:
+        from app.services.qdrant.qdrant_service import qdrant_service
+        qdrant_service.initialize()
+        logger.info("[Lifespan] Qdrant collection initialized/validated successfully.")
+    except Exception as qd_err:
+        logger.warning(f"[Lifespan|WARN] Qdrant startup initialization warning: {qd_err}")
+
     logger.info(
         f"[Lifespan] {settings.app.name} v{settings.app.version} started successfully. "
         f"Ready: {ServiceRegistry.is_ready()}"

@@ -13,7 +13,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const checkQueue = async () => {
         try {
-          const data = await api.get<any>('/api/upload'); // using /api/upload since status might not exist
+          const data = await api.get<any>('/api/v1/upload');
           const processing = (data.documents || []).filter((d: any) => d.status === 'PROCESSING');
           setQueueCount(processing.length);
         } catch (e) {
@@ -134,7 +134,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchLogs = async () => {
         try {
-          const data = await api.get<any[]>('/api/audit/events');
+          const data = await api.get<any[]>('/api/v1/audit/events?limit=100');
           setAuditCount(data.length || 0);
         } catch (e) {
           console.error(e);
@@ -169,7 +169,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchLogs = async () => {
         try {
-          const data = await api.get<any[]>('/api/audit/events');
+          const data = await api.get<any[]>('/api/v1/audit/events?limit=100');
           const criticals = data.filter((d: any) => d.severity === 'HIGH' || d.severity === 'CRITICAL');
           setHighRiskCount(criticals.length);
         } catch (e) {
@@ -209,7 +209,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchFiles = async () => {
         try {
-          const data = await api.get<any>('/api/upload');
+          const data = await api.get<any>('/api/v1/upload');
           setFiles(data.documents || []);
         } catch (e) {
           console.error(e);
@@ -256,7 +256,7 @@ export const WIDGET_REGISTRY: Record<string, React.ComponentType> = {
     React.useEffect(() => {
       const fetchFiles = async () => {
         try {
-          const data = await api.get<any>('/api/upload');
+          const data = await api.get<any>('/api/v1/upload');
           setFiles(data.documents || []);
         } catch (e) {
           console.error(e);

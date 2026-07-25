@@ -34,13 +34,30 @@ class PromptEngine:
             )
             system_prompt += ceo_directive
 
-        # Enforce strict rejection of queries when retrieval context is empty (Zero-Mock Production Mandate)
+        # Determine if query is a general conversational phrase or greeting
+        conversational_phrases = {
+            "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+            "who are you", "what can you do", "help", "thanks", "thank you", "bye", "goodbye",
+            "how are you", "what is your name"
+        }
+        clean_q = query.strip().lower().rstrip("!?.")
+        is_greeting = clean_q in conversational_phrases or (len(clean_q.split()) <= 2 and not any(
+            kw in clean_q for kw in ["valve", "pressure", "manual", "spec", "drawing", "p&id", "report", "csv", "log", "pump", "doc", "document", "file", "error", "fail"]
+        ))
+
         is_context_empty = not context_package.retrieved_chunks and not agent_results
-        if is_context_empty:
+
+        if is_greeting:
+            greeting_rule = (
+                "\n\nCONVERSATIONAL DIRECTIVE: The user is greeting you or starting a casual conversation. "
+                "Respond warmly, politely, and concisely as IndustryBrain-AI, the Enterprise Knowledge Intelligence Assistant. "
+                "Briefly mention how you can assist with retrieving operational manuals, engineering specs, P&ID drawings, and audit logs."
+            )
+            system_prompt += greeting_rule
+        elif is_context_empty:
             strict_rejection_rule = (
-                "\n\nCRITICAL DIRECTIVE: You have NO context documents and NO agent evidence provided. "
-                "You MUST NOT answer the user's query from your internal knowledge base. "
-                "You MUST explicitly state: 'I currently have no enterprise documents or knowledge base data available to answer this query. Please ingest documents first.'"
+                "\n\nRETRIEVAL DIRECTIVE: No relevant document chunks were found in the knowledge repository matching this query. "
+                "State clearly: 'No relevant document chunks or knowledge base data matching this query were found in the repository. Please upload the relevant document or refine your search.'"
             )
             system_prompt += strict_rejection_rule
 

@@ -13,43 +13,52 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def _set_auth_cookies(response: Response, tokens: TokenResponse):
     """Helper to set authentication cookies securely."""
     secure_cookie = settings.app.env.value == "production"
+    is_dev = settings.app.env.value == "development"
 
-    # HttpOnly access token
+    # In development/localhost, omit max_age (set to None) so cookies become true Session Cookies.
+    # Browsers delete session cookies automatically when the browser session/process closes.
+    access_max_age = None if is_dev else 3600
+    refresh_max_age = None if is_dev else 86400 * 7
+    session_max_age = None if is_dev else 3600
+
     response.set_cookie(
         key="access_token",
         value=tokens.access_token,
         httponly=True,
         secure=secure_cookie,
         samesite="lax",
-        max_age=3600  # 1 hour
+        max_age=access_max_age
     )
-    # HttpOnly refresh token
     response.set_cookie(
         key="refresh_token",
         value=tokens.refresh_token,
         httponly=True,
         secure=secure_cookie,
         samesite="lax",
-        max_age=86400 * 7  # 7 days
+        max_age=refresh_max_age
     )
-    # Non-HttpOnly token for frontend middleware state detection
     response.set_cookie(
         key="ib-session-token",
         value="authenticated",
         httponly=False,
         secure=secure_cookie,
         samesite="lax",
-        max_age=3600
+        max_age=session_max_age
     )
 
 @router.post("/login", response_model=dict)
 def login(login_data: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
     """
-    Authenticates email & password credentials, setting signed access and refresh tokens as cookies.
+    Authenticates email & password credentials, setting signed access and refresh tokens as cookies and JSON payload.
     """
     tokens = AuthService.authenticate_user(db, login_data)
     _set_auth_cookies(response, tokens)
-    return {"message": "Login successful"}
+    return {
+        "message": "Login successful",
+        "access_token": tokens.access_token,
+        "refresh_token": tokens.refresh_token,
+        "token_type": "bearer"
+    }
 
 @router.post("/refresh", response_model=dict)
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):

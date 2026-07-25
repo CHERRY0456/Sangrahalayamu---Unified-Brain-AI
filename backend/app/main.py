@@ -4,6 +4,11 @@ app/main.py — Application Entry Point (Ticket #13)
 Wires the complete middleware stack, exception handlers, and routers.
 """
 import logging
+import warnings
+
+# Suppress PyTorch DataLoader pin_memory UserWarnings in CPU-only environments
+warnings.filterwarnings("ignore", category=UserWarning, message=".*pin_memory.*")
+warnings.filterwarnings("ignore", category=UserWarning, module=".*dataloader.*")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,7 +48,6 @@ app = FastAPI(
         {"name": "access",          "description": "Temporary access override requests and approvals."},
         {"name": "search",          "description": "Hybrid semantic + graph retrieval."},
         {"name": "ai",              "description": "AI question answering and transparency reports."},
-        {"name": "recommendations", "description": "Proactive enterprise intelligence."},
         {"name": "audit",           "description": "Compliance activity log and user history."},
         {"name": "notifications",   "description": "In-app notification management."},
         {"name": "administration",  "description": "Platform administration and diagnostics."},
