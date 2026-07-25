@@ -4,64 +4,56 @@ High-performance Python backend powering **IndustryBrain-AI** (Codename: *Sangra
 
 ---
 
-## 🏛️ High-Level System Architecture
+## 🏛️ Backend High-Level Architecture
 
 ```mermaid
-graph TD
-    classDef frontend fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
-    classDef backend fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#fff;
-    classDef rag fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#fff;
-    classDef storage fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
-    classDef bedrock fill:#451a03,stroke:#fb923c,stroke-width:2px,color:#fff;
+graph LR
+    classDef api fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#fff;
+    classDef engine fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#fff;
+    classDef db fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
+    classDef ai fill:#451a03,stroke:#fb923c,stroke-width:2px,color:#fff;
 
-    subgraph UserInterface ["1. Client Workspace Layer"]
-        UI["React / Next.js Enterprise Web App<br/>(Chat, Ingestion Manager, Audit & Transparency)"]:::frontend
+    subgraph API ["1. API Router & Controllers (/api/v1)"]
+        A1["Auth & Access Controllers"]:::api
+        A2["Upload Controller"]:::api
+        A3["Chat SSE Streaming Controller"]:::api
+        A4["Audit & Dashboard Controllers"]:::api
     end
 
-    subgraph ApplicationLayer ["2. FastAPI Service Layer (/api/v1)"]
-        API["API Gateway & Controllers<br/>(Auth, RBAC Clearance, Middleware & SSE Streams)"]:::backend
-        Ingestion["Multi-Format Ingestion Pipeline<br/>(Dynamic Docling / Native Parsers & Chunking)"]:::backend
-        Agents["Multi-Agent Reasoning Orchestrator<br/>(Root Cause Analysis, Safety & Maintenance Agents)"]:::backend
+    subgraph CoreEngine ["2. Core Processing & Reasoning"]
+        E1["Multi-Format Ingestion Pipeline<br/>(Docling Toggle / Native Parsers)"]:::engine
+        E2["3-Way Hybrid RAG Engine<br/>(Intent Guard + Rank Fusion)"]:::engine
+        E3["Multi-Agent Orchestrator<br/>(RCA, Safety, Maintenance)"]:::engine
     end
 
-    subgraph HybridRAG ["3. Hybrid RAG Engine"]
-        Retrieval["3-Way Hybrid Retrieval & Rank Fusion<br/>(Intent Guard + Metadata + Vector + Graph RAG)"]:::rag
+    subgraph Storage ["3. Data Persistence"]
+        D1[(PostgreSQL RDBMS<br/>Metadata & Audit Logs)]:::db
+        D2[(Qdrant Vector DB<br/>1024-dim Collection)]:::db
+        D3[(Neo4j Graph DB<br/>Equipment Topology)]:::db
     end
 
-    subgraph DataPersistence ["4. Persistence & Knowledge Base"]
-        Postgres[(PostgreSQL RDBMS<br/>Metadata, Users & Audit Logs)]:::storage
-        Qdrant[(Qdrant Vector DB<br/>1024-dim Cohere Embeddings)]:::storage
-        Neo4j[(Neo4j Graph DB<br/>Equipment Topology & Schematics)]:::storage
+    subgraph Bedrock ["4. AWS Bedrock Cloud AI"]
+        B1["Cohere Embed v3<br/>(1024-dim Embeddings)"]:::ai
+        B2["Qwen 235B LLM<br/>(AI Answer Generation)"]:::ai
     end
 
-    subgraph FoundationAI ["5. AWS Bedrock AI Layer"]
-        Cohere["AWS Bedrock Cohere Embed v3<br/>(1024-dim Vector Embeddings)"]:::bedrock
-        LLM["AWS Bedrock Qwen 235B / Llama 3<br/>(Grounded Answer Generation)"]:::bedrock
-    end
-
-    %% Data flow connections
-    UI <-->|HTTP REST / SSE Token Stream| API
-    API -->|Document Ingestion| Ingestion
-    API -->|User Query| Retrieval
+    API --> CoreEngine
+    E1 -->|Store Metadata| D1
+    E1 -->|Generate Vectors| B1 -->|Vectors| D2
+    E1 -->|Build Topology| D3
     
-    Ingestion -->|Metadata & Provenance| Postgres
-    Ingestion -->|Generate Embeddings| Cohere -->|Store Vectors| Qdrant
-    Ingestion -->|Extract Equipment Relations| Neo4j
-    
-    Retrieval -->|1. SQL Pre-Filter| Postgres
-    Retrieval -->|2. Vector Search| Qdrant
-    Retrieval -->|3. Cypher Traversal| Neo4j
-    
-    Retrieval -->|4. Context Fusion| Agents
-    Agents <-->|Prompt & Response Stream| LLM
+    E2 -->|SQL Pre-Filter| D1
+    E2 -->|Vector Search| D2
+    E2 -->|Cypher Traversal| D3
+    E2 -->|Context Package| E3 <-->|Prompt & Stream| B2
 ```
 
 ---
 
-## ⚡ Key Implementation Highlights
+## ⚡ Backend Core Pillars
 
 ### 1. Low-Memory 8GB RAM Strategy (`ENABLE_DOCLING`)
-- Heavy layout models (IBM Docling) require 16GB+ RAM and can cause PyTorch `std::bad_alloc` crashes on 8GB laptops.
+- IBM Docling relies on heavy PyTorch deep learning models (16GB+ RAM requirement).
 - Controlled via `ENABLE_DOCLING` in `backend/.env`:
   - **`ENABLE_DOCLING=False` (Default for 8GB RAM)**: Bypasses PyTorch models. Uses lightweight native parsers (`PyMuPDF`, `pdfplumber`, `python-docx`, `openpyxl`, `ezdxf`, `extract-msg`) running in **`< 50MB RAM`** and completing in **`< 2s`**.
   - **`ENABLE_DOCLING=True` (For High-Memory GPU/Servers)**: Enables IBM Docling visual layout models.
@@ -77,7 +69,34 @@ graph TD
 
 ---
 
-## 🚀 Execution & Configuration
+## 📂 Backend Directory Structure
+
+```
+backend/
+├── app/
+│   ├── api/                  # Decoupled FastAPI REST & SSE routers (/api/v1/*)
+│   │   ├── auth.py           # JWT Authentication & session management
+│   │   ├── access.py         # Temporary RBAC clearance overrides
+│   │   ├── audit.py          # Compliance & security event logs
+│   │   ├── dashboard.py      # Summary metrics & repository stats
+│   │   └── routers/          # Upload, chat, graph, agents, and health endpoints
+│   ├── core/                 # Centralized Pydantic Settings & environment config
+│   ├── database/             # SQLAlchemy engine & Qdrant vector client
+│   ├── models/               # SQLAlchemy ORM models (User, Document, AuditLog)
+│   └── services/             # Core business & AI reasoning services
+│       ├── processing/       # Multi-format ingestion pipeline & Docling toggle
+│       ├── retrieval/        # 3-Way Hybrid RAG Orchestrator & rank fusion
+│       ├── embeddings/       # Cohere Embed v3 provider (1024-dim, sub-batched)
+│       ├── graph/            # Neo4j graph provider & Cypher builders
+│       ├── ai/               # AI Orchestrator, SSE stream generator & prompts
+│       ├── validation/       # Response validator & transparency formatters
+│       └── conversation/     # Session history manager
+└── scripts/                  # Seed tools & stack diagnostic scripts
+```
+
+---
+
+## 🚀 Setup & Execution
 
 ### 1. Environment Setup
 ```bash

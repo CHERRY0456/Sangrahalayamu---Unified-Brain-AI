@@ -1,56 +1,96 @@
-# IndustryBrain-AI: Next.js Frontend
+# IndustryBrain-AI: Next.js Frontend Client
 
-This is the Next.js frontend client for IndustryBrain-AI. It is built using the Next.js App Router, styled with TailwindCSS, and integrated with the FastAPI backend using Server-Sent Events (SSE) for streaming responses and multipart upload APIs.
-
----
-
-## 🛠️ Key UI Features
-
-1. **Dashboard & Metrics Panel**: A unified workspace overview displaying active ingestion statuses, system health, and proactive recommendations.
-2. **Document Ingestion Studio (`/upload`)**: A multi-step ingestion helper:
-   - **Step 1**: Ingest files (queue files locally).
-   - **Step 2**: Add metadata (select document categories like blueprint/SOP and add descriptions).
-   - **Step 3**: Review details and commit to the layout-aware AI parsing pipeline.
-3. **AI Processing Studio (`/processing`)**: Visualizes the processing pipeline (OCR extraction, coordinate evaluations, entity canonicalization, graph build, and vector indexing).
-4. **Diagnostic Chat & Explainability Workspace (`/chat`)**:
-   - Streams reasoning answers in real-time.
-   - Provides a split-screen **AI Explainability Panel** which exposes confidence ratings, document coverage, exact citation text snippets, sequential reasoning tracks, and Neo4j relationship maps.
+The frontend client for **IndustryBrain-AI** (Codename: *Sangrahalayamu*). Built with **Next.js 14 App Router**, **TypeScript**, **TailwindCSS**, **Lucide UI Icons**, **Zustand State Stores**, and integrated with the FastAPI backend via Server-Sent Events (SSE) streaming and REST services.
 
 ---
 
-## 📂 Frontend Structure
+## 🏛️ Frontend High-Level Architecture
 
-- **`app/`**: Next.js App Router endpoints (`/chat`, `/upload`, `/processing`, etc.).
-- **`components/`**: Atomic, reusable interface widgets.
-- **`features/`**: Modular logic directories housing component dependencies:
-  - `chat/`: Chat input bubbles, sidebars, and request access overrides.
-  - `upload/`: Ingestion zones, metadata forms, and progress reviews.
-  - `transparency/`: Explanations, citations, confidence bars, and reasoning timelines.
-  - `persona/`: RBAC restrictions and persona focus perspective overrides.
-- **`services/`**: Class wrappers encapsulating API endpoints (`chat-service.ts`, `upload-service.ts`).
-- **`store/`**: Global state management (Zustand context).
-- **`lib/`**: Network abstraction layer (`api-client.ts`).
+```mermaid
+graph LR
+    classDef page fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef feature fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#fff;
+    classDef service fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#fff;
+    classDef api fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff;
+
+    subgraph Pages ["1. App Router Views"]
+        P1["/chat Workspace"]:::page
+        P2["/upload Ingestion Studio"]:::page
+        P3["/audit Compliance Log"]:::page
+        P4["/ Metric Dashboard"]:::page
+    end
+
+    subgraph Modules ["2. Feature Modules & State"]
+        F1["Chat & Context Bar"]:::feature
+        F2["Ingestion Manager"]:::feature
+        F3["Transparency & Node Graph Panel"]:::feature
+        F4["RBAC & Persona Store"]:::feature
+    end
+
+    subgraph Services ["3. Network & Service Layer"]
+        S1["ApiClient (Bearer JWT Injector)"]:::service
+        S2["AuthService"]:::service
+        S3["UploadService"]:::service
+        S4["SSE Stream Reader"]:::service
+    end
+
+    subgraph BackendAPI ["4. Backend Integration"]
+        B1["FastAPI Server (/api/v1/*)"]:::api
+    end
+
+    Pages --> Modules
+    Modules --> Services
+    Services <-->|HTTP REST & SSE Token Stream| BackendAPI
+```
 
 ---
 
-## 🚀 Setup & Development
+## 🛠️ Key UI Features & Views
+
+1. **Dashboard Overview (`/`)**: High-level repository metrics, recent document activity timelines, and system health status.
+2. **Document Ingestion Studio (`/upload`)**: Drag-and-drop multi-file upload manager supporting heterogeneous formats (`.pdf`, `.docx`, `.xlsx`, `.csv`, `.pptx`, `.dxf`, `.msg`, `.log`, scanned images).
+3. **AI Chat & Transparency Workspace (`/chat`)**:
+   - Real-time token streaming using Server-Sent Events (SSE).
+   - **Split-Screen Transparency Panel**: Visualizes confidence scores, document coverage, exact page citation text snippets, step-by-step reasoning logs, and interactive Neo4j equipment node relationship graphs.
+4. **Audit & Compliance Log (`/audit`)**: Security activity logs tracking clearance requests, document uploads, and user retrieval events.
+
+---
+
+## 📂 Frontend Directory Structure
+
+```
+frontend/
+├── app/                      # Next.js 14 App Router pages (/chat, /upload, /audit, /login)
+├── components/               # Atomic UI widgets and icons
+├── features/                 # Feature-specific module components
+│   ├── chat/                 # Chat input, message bubbles, context bar, sidebars
+│   ├── upload/               # Ingestion dropzone, metadata forms, progress reviews
+│   ├── transparency/         # Reasoning steps, citation drawers, graph visualizers
+│   ├── persona/              # RBAC permission guards and role definitions
+│   └── dashboard/            # Summary cards, activity timelines, document tables
+├── services/                 # API service wrappers (auth-service.ts, chat-service.ts)
+├── store/                    # Zustand state management context
+└── lib/                      # Network layer (api-client.ts with Bearer token injector)
+```
+
+---
+
+## 🚀 Setup & Development Execution
 
 ### 1. Install Node Dependencies
-Ensure you have Node.js 18+ installed, then run:
+Ensure Node.js 18+ is installed:
 ```bash
 npm install
 ```
 
-### 2. Configure Local Environment Variables
-Create a `.env.local` file in the root of the `/frontend` directory:
+### 2. Configure Environment Variables
+Create a `.env.local` file in `/frontend`:
 ```bash
-# Point to your FastAPI backend
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### 3. Run Dev Server
-Launch the local web server:
+### 3. Start Development Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+Open [http://localhost:3000](http://localhost:3000) to launch the workspace.
